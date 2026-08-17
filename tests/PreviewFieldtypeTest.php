@@ -48,6 +48,7 @@ it('hands the browser the site defaults it cannot know', function () {
         'title' => 'seo_title',
         'description' => 'seo_description',
         'noindex' => 'seo_noindex',
+        'image' => 'seo_image',
     ]);
 });
 
@@ -95,4 +96,19 @@ it('waits for Statamic instead of giving up', function () {
     expect($script)
         ->toContain('whenReady')
         ->not->toContain('if (!Statamic || !Vue) return');
+});
+
+it('reads the picked image from the publish form meta', function () {
+    // The image has to come from meta, not from the value: the value is an asset
+    // ID, and only meta carries the URL needed to render it before a save.
+    $script = file_get_contents(__DIR__.'/../resources/js/cp.js');
+
+    expect($script)
+        ->toContain('container.meta')
+        ->toContain('picked.permalink || picked.url');
+});
+
+it('says that Google does not use the sharing image', function () {
+    expect(file_get_contents(__DIR__.'/../resources/js/cp.js'))
+        ->toContain('Google picks any thumbnail from the page content itself');
 });

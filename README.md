@@ -6,7 +6,7 @@ It replaces the stack many Statamic sites run today — `alt-design/alt-seo`, `a
 
 ## Features
 
-**Live previews** — a read-only field at the top of every SEO tab shows the Google result and the social card as the editor types, truncated by measured pixel width the way Google actually cuts it, with warnings for a missing description, a title that will be cut off, or a page hidden from search.
+**Live previews** — a read-only field at the top of every SEO tab shows the Google result and the social card as the editor types, truncated by measured pixel width the way Google actually cuts it, with warnings for a missing description, a title that will be cut off, or a page hidden from search. The social card follows the image as it is picked, before the entry is saved. The Google preview deliberately shows no image: Google takes its thumbnail from the page content, not from the sharing image.
 
 **Meta tags** — title, description, canonical, robots, Open Graph, Twitter cards, hreflang and search console verification from one tag. Per-page fields override site-wide defaults, and each site can override the defaults again.
 
