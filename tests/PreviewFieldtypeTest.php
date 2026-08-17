@@ -112,3 +112,18 @@ it('says that Google does not use the sharing image', function () {
     expect(file_get_contents(__DIR__.'/../resources/js/cp.js'))
         ->toContain('Google picks any thumbnail from the page content itself');
 });
+
+it('keeps the Google mock readable in dark mode', function () {
+    // Google's palette only works on Google's surface, so the mock carries its
+    // own white background rather than inheriting the control panel's.
+    $script = file_get_contents(__DIR__.'/../resources/js/cp.js');
+
+    expect($script)->toContain('background:#fff');
+
+    // Anything using the CP's palette must cover both modes.
+    preg_match_all('/class="(text-gray-\d00[^"]*)"/', $script, $matches);
+
+    foreach ($matches[1] as $classes) {
+        expect($classes)->toContain('dark:');
+    }
+});
