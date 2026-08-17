@@ -6,7 +6,9 @@ It replaces the stack many Statamic sites run today — `alt-design/alt-seo`, `a
 
 ## Features
 
-**Meta tags** — title, description, canonical, robots, Open Graph, Twitter cards and hreflang from one tag. Per-page fields override site-wide defaults.
+**Live previews** — a read-only field at the top of every SEO tab shows the Google result and the social card as the editor types, truncated by measured pixel width the way Google actually cuts it, with warnings for a missing description, a title that will be cut off, or a page hidden from search.
+
+**Meta tags** — title, description, canonical, robots, Open Graph, Twitter cards, hreflang and search console verification from one tag. Per-page fields override site-wide defaults, and each site can override the defaults again.
 
 **Sitemap** — `/sitemap.xml`, built from published, routable entries (and optionally taxonomy terms), with per-page "leave out of the sitemap" and collection exclusions. Cached, and flushed when content changes.
 
@@ -21,6 +23,8 @@ It replaces the stack many Statamic sites run today — `alt-design/alt-seo`, `a
 **robots.txt** — served from the CP when there is no `public/robots.txt`, with an AI crawler policy (allow all, block all, or pick).
 
 **AI crawler log** — see which assistants (ChatGPT, Claude, Perplexity, Gemini, …) actually read the site.
+
+**Dashboard widgets** — recent 404s and AI crawler activity, so problems surface without going looking.
 
 ## Installation
 
@@ -46,6 +50,17 @@ Then add the tag to your layout's `<head>`:
 `vulpo:seo:index-uris` records where every page currently lives. Automatic redirects compare against that index, so run it once after installing. It maintains itself afterwards.
 
 Settings live in the control panel under **Tools → SEO**. The SEO and Structured data tabs are added to every entry and term blueprint automatically.
+
+To put the widgets on the dashboard, add them in `config/statamic/cp.php`:
+
+```php
+'widgets' => [
+    ['type' => 'vulpo_seo_404s', 'width' => 50],
+    ['type' => 'vulpo_seo_ai_crawlers', 'width' => 50],
+],
+```
+
+On a multi-site install, **SEO → Settings → Sites** takes a row per site to override the site name, default description, sharing image, business details and llms.txt summary. Anything left empty falls back to the global value.
 
 ## Tags
 
@@ -101,6 +116,7 @@ Published blueprints in `resources/blueprints/vendor/vulpo-seo/` win over the ad
 | `seo_canonical`, `seo_noindex`, `seo_nofollow` | Indexing |
 | `seo_sitemap_exclude` | Leave the page out of the sitemap |
 | `seo_schema_type` + `seo_schema_*` | Per-page structured data |
+| `seo_preview` | The live Google and social preview (stores nothing) |
 
 ## Where data lives
 
@@ -120,6 +136,12 @@ Settings and redirects belong in version control. The files in `storage` do not.
 - Control panel screens use Statamic's own UI components. Every export of the CP's `@ui` package is registered globally as a `ui-<kebab-name>` Vue component, and the CP compiles a Blade view's output as an in-DOM template, so `<ui-card-panel>`, `<ui-table>` and friends work straight from Blade and the screens match the CP. Two things not to try instead: a `<style>` block in a CP view (the Vue app drops it) and Tailwind variants the CP bundle never compiled (`sm:grid-cols-2` and the like are absent, plain utilities are fine).
 - The config file is `config/seo.php`, not `config/vulpo-seo.php`. Statamic derives an addon's slug from the package name, and a custom `extra.statamic.slug` breaks core's settings lookup: settings are written to `resources/addons/{slug}.yaml` but read from `resources/addons/{package-name}.yaml`.
 - Geocoding uses OpenStreetMap Nominatim, whose usage policy requires a descriptive User-Agent; set `VULPO_SEO_GEOCODER_USER_AGENT` for production.
+
+## Extending
+
+The preview field is a normal fieldtype, so you can move it, drop it, or add it to a blueprint of your own by publishing the blueprints and editing them.
+
+The control panel script is deliberately buildless: `resources/js/cp.js` registers the preview component through the globals Statamic exposes (`window.Statamic.$components`, `window.Vue`, `window.__STATAMIC__`), which means there is no npm dependency, no Vite config, and no bundle to rebuild when Statamic ships a new minor version. It is published to `public/vendor/seo/js/` by `php please statamic:install` or `php artisan vendor:publish --tag=seo --force`.
 
 ## Testing
 

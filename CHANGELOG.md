@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.0
+
+- Site verification fields for Google, Bing, Pinterest and Facebook, plus a grid for anything else. A pasted `<meta>` tag is accepted as well as a bare code.
+- Dashboard widgets: recent 404s and AI crawler activity.
+- Per-site overrides on a new Sites settings tab, for the site name, default description, sharing image, business details and llms.txt summary.
+
+## 1.1.0
+
+- Live Google and social previews on the SEO tab, as a read-only `seo_preview` fieldtype.
+- CI on GitHub Actions: Pest across PHP 8.3 and 8.4 against lowest and highest dependencies, plus a Pint check.
+
 ## 1.0.5
 
 - The control panel screens are now built from Statamic's own UI components (`ui-header`, `ui-card-panel`, `ui-table`, `ui-badge`, `ui-button`, `ui-input`), so they match the control panel exactly instead of imitating it. No addon CSS ships any more.

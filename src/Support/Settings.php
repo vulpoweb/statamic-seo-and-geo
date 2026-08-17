@@ -3,6 +3,7 @@
 namespace Vulpo\Seo\Support;
 
 use Statamic\Facades\Addon;
+use Statamic\Facades\Site;
 use Statamic\Support\Arr;
 
 /**
@@ -19,6 +20,9 @@ class Settings
 
     private static ?array $values = null;
 
+    /** @var array<string, array<string, mixed>> keyed by site handle */
+    private static array $overrides = [];
+
     /**
      * @return array<string, mixed>
      */
@@ -33,6 +37,7 @@ class Settings
     public static function flush(): void
     {
         self::$values = null;
+        self::$overrides = [];
     }
 
     /**
@@ -43,13 +48,39 @@ class Settings
     public static function swap(array $values): void
     {
         self::$values = $values;
+        self::$overrides = [];
     }
 
     public static function get(string $key, mixed $default = null): mixed
     {
-        $value = Arr::get(self::all(), $key);
+        $value = Arr::get(self::siteOverrides(), $key);
+
+        if ($value === null || $value === '' || $value === []) {
+            $value = Arr::get(self::all(), $key);
+        }
 
         return $value === null || $value === '' || $value === [] ? $default : $value;
+    }
+
+    /**
+     * Values overridden for the site being rendered. Empty on a single-site
+     * install, and empty for any site without a row.
+     *
+     * @return array<string, mixed>
+     */
+    private static function siteOverrides(): array
+    {
+        $site = Site::current()->handle();
+
+        if (array_key_exists($site, self::$overrides)) {
+            return self::$overrides[$site];
+        }
+
+        $row = collect(Arr::wrap(Arr::get(self::all(), 'site_overrides', [])))
+            ->filter(fn ($row) => is_array($row))
+            ->first(fn (array $row) => in_array($site, Arr::wrap($row['site'] ?? []), true));
+
+        return self::$overrides[$site] = Arr::except($row ?? [], 'site');
     }
 
     public static function string(string $key, ?string $default = null): ?string

@@ -105,6 +105,7 @@ class Meta
             $this->openGraphTags(),
             $this->twitterTags(),
             $this->alternateTags(),
+            $this->verificationTags(),
         )));
     }
 
@@ -180,6 +181,55 @@ class Meta
         }
 
         return $tags;
+    }
+
+    /**
+     * Ownership verification for search consoles and social platforms. Only
+     * needed on the homepage, but harmless everywhere and simpler to reason
+     * about, which is how every service documents it.
+     *
+     * @return array<int, string>
+     */
+    private function verificationTags(): array
+    {
+        $tags = [];
+
+        $known = [
+            'verify_google' => 'google-site-verification',
+            'verify_bing' => 'msvalidate.01',
+            'verify_pinterest' => 'p:domain_verify',
+            'verify_facebook' => 'facebook-domain-verification',
+        ];
+
+        foreach ($known as $setting => $name) {
+            if ($content = Settings::string($setting)) {
+                $tags[] = $this->meta('name', $name, $this->verificationCode($content));
+            }
+        }
+
+        foreach (Settings::rows('verify_custom') as $row) {
+            $name = isset($row['name']) ? trim((string) $row['name']) : '';
+            $content = isset($row['content']) ? trim((string) $row['content']) : '';
+
+            if ($name !== '' && $content !== '') {
+                $tags[] = $this->meta('name', $name, $this->verificationCode($content));
+            }
+        }
+
+        return $tags;
+    }
+
+    /**
+     * Editors paste the whole meta tag as often as they paste the code, so pull
+     * the content value back out when they do.
+     */
+    private function verificationCode(string $value): string
+    {
+        if (preg_match('/content=["\']([^"\']+)["\']/i', $value, $matches)) {
+            return trim($matches[1]);
+        }
+
+        return trim($value);
     }
 
     /**
