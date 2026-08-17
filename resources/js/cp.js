@@ -203,11 +203,21 @@
                     </div>
 
                     <ui-card>
-                        <div v-if="tab === 'google'" style="font-family: Arial, sans-serif; max-width: 600px;">
-                            <div style="font-size:12px; color:#4d5156; line-height:1.4;">{{ breadcrumb }}</div>
-                            <div style="font-size:20px; line-height:1.3; color:#1a0dab; margin-top:2px;">{{ title.text }}</div>
-                            <div style="font-size:14px; line-height:1.58; color:#4d5156; margin-top:4px;">{{ description.text }}</div>
-                            <div class="text-gray-500" style="font-size:.75rem; margin-top:.75rem; font-family: inherit;">
+                        <div v-if="tab === 'google'">
+                            <!--
+                                Google's own colours, on Google's own surface. The
+                                mock stays light in a dark control panel on purpose:
+                                it is a picture of a search result, and borrowing the
+                                CP's palette would make it both wrong and unreadable.
+                            -->
+                            <div
+                                style="font-family: Arial, sans-serif; max-width: 600px; background:#fff; border-radius:.5rem; padding:1rem 1.25rem;"
+                            >
+                                <div style="font-size:12px; color:#4d5156; line-height:1.4;">{{ breadcrumb }}</div>
+                                <div style="font-size:20px; line-height:1.3; color:#1a0dab; margin-top:2px;">{{ title.text }}</div>
+                                <div style="font-size:14px; line-height:1.58; color:#4d5156; margin-top:4px;">{{ description.text }}</div>
+                            </div>
+                            <div class="text-gray-500 dark:text-gray-400" style="font-size:.75rem; margin-top:.75rem;">
                                 {{ __('Google picks any thumbnail from the page content itself. The sharing image is what social networks and chat apps use.') }}
                             </div>
                         </div>
@@ -219,15 +229,16 @@
                                     :style="{ backgroundImage: 'url(' + image + ')' }"
                                     style="aspect-ratio: 1200 / 630; background-size: cover; background-position: center;"
                                 ></div>
+                                <!-- A short strip, rather than an empty 1200x630 hole. -->
                                 <div
                                     v-else
-                                    style="aspect-ratio: 1200 / 630; display:flex; align-items:center; justify-content:center; font-size:.8125rem;"
-                                    class="text-gray-500"
+                                    style="height:5rem; display:flex; align-items:center; justify-content:center; font-size:.8125rem;"
+                                    class="text-gray-500 dark:text-gray-400"
                                 >{{ __('No sharing image set') }}</div>
                                 <div style="padding:.625rem .75rem;">
-                                    <div style="font-size:.75rem; text-transform:uppercase;" class="text-gray-500">{{ host }}</div>
-                                    <div style="font-weight:600; font-size:.9375rem; margin-top:.125rem;">{{ fullTitle }}</div>
-                                    <div style="font-size:.8125rem; margin-top:.125rem;" class="text-gray-500">{{ description.text }}</div>
+                                    <div style="font-size:.75rem; text-transform:uppercase;" class="text-gray-500 dark:text-gray-400">{{ host }}</div>
+                                    <div style="font-weight:600; font-size:.9375rem; margin-top:.125rem;" class="text-gray-900 dark:text-gray-200">{{ fullTitle }}</div>
+                                    <div style="font-size:.8125rem; margin-top:.125rem;" class="text-gray-500 dark:text-gray-400">{{ description.text }}</div>
                                 </div>
                             </div>
                         </div>

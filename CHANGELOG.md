@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.3
+
+- The Google preview is readable in dark mode. It now renders on its own white surface with Google's colours, instead of putting Google's light-mode blue and grey straight onto the control panel's dark background.
+- The social card follows the control panel's light and dark palette, and its empty image state is a short strip instead of a full 1200x630 hole.
+
 ## 1.2.2
 
 - The social preview now follows the image the editor picks, reading it from the publish form's meta instead of only the value that was saved.
