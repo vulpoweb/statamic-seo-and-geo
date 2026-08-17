@@ -1,0 +1,86 @@
+<?php
+
+use Statamic\Facades\Collection as CollectionFacade;
+use Statamic\Facades\Entry;
+use Statamic\Facades\YAML;
+use Statamic\Fields\Field;
+use Statamic\Statamic;
+use Statamic\Testing\Concerns\PreventsSavingStacheItemsToDisk;
+use Vulpo\Seo\Fieldtypes\SeoPreview;
+use Vulpo\Seo\Support\Settings;
+
+uses(PreventsSavingStacheItemsToDisk::class);
+
+function preview(?object $parent = null): array
+{
+    $field = new Field('seo_preview', ['type' => 'seo_preview']);
+
+    if ($parent) {
+        $field->setParent($parent);
+    }
+
+    return (new SeoPreview)->setField($field)->preload();
+}
+
+it('is registered as a fieldtype', function () {
+    expect(SeoPreview::handle())->toBe('seo_preview');
+    expect(app('statamic.fieldtypes')->has('seo_preview'))->toBeTrue();
+});
+
+it('registers the control panel script', function () {
+    expect(Statamic::availableScripts(request()))->toHaveKey('seo');
+});
+
+it('hands the browser the site defaults it cannot know', function () {
+    Settings::swap([
+        'site_name' => 'Vulpo',
+        'title_separator' => '·',
+        'default_description' => 'A default description',
+    ]);
+
+    $preloaded = preview();
+
+    expect($preloaded['site_name'])->toBe('Vulpo');
+    expect($preloaded['separator'])->toBe('·');
+    expect($preloaded['append_site_name'])->toBeTrue();
+    expect($preloaded['default_description'])->toBe('A default description');
+    expect($preloaded['handles'])->toBe([
+        'title' => 'seo_title',
+        'description' => 'seo_description',
+        'noindex' => 'seo_noindex',
+    ]);
+});
+
+it('uses the entry URL and title when there is an entry', function () {
+    CollectionFacade::make('pages')->routes('/{slug}')->save();
+
+    $entry = Entry::make()->collection('pages')->slug('about')->data(['title' => 'About us']);
+    $entry->save();
+
+    $preloaded = preview($entry);
+
+    expect($preloaded['url'])->toBe($entry->absoluteUrl());
+    expect($preloaded['fallback_title'])->toBe('About us');
+});
+
+it('reports when the page is hidden from search engines', function () {
+    Settings::swap(['noindex_site' => true]);
+
+    expect(preview()['noindex'])->toBeTrue();
+});
+
+it('stores nothing of its own', function () {
+    $fieldtype = new SeoPreview;
+
+    expect($fieldtype->process('anything'))->toBeNull();
+    expect($fieldtype->preProcess('anything'))->toBeNull();
+});
+
+it('sits at the top of the injected SEO tab', function () {
+    $blueprint = YAML::file(__DIR__.'/../resources/blueprints/entry-fields.yaml')->parse();
+
+    $firstSection = $blueprint['tabs']['vulpo_seo']['sections'][0];
+
+    expect($firstSection['fields'][0]['handle'])->toBe('seo_preview');
+    expect($firstSection['fields'][0]['field']['type'])->toBe('seo_preview');
+});

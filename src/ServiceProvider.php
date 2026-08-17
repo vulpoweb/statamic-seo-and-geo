@@ -16,6 +16,7 @@ use Statamic\Providers\AddonServiceProvider;
 use Vulpo\Seo\AiCrawlers\CrawlerLog;
 use Vulpo\Seo\Console\IndexUrisCommand;
 use Vulpo\Seo\Console\MigrateCommand;
+use Vulpo\Seo\Fieldtypes\SeoPreview;
 use Vulpo\Seo\Http\Middleware\HandleNotFound;
 use Vulpo\Seo\Http\Middleware\LogAiCrawlers;
 use Vulpo\Seo\Listeners\FlushCaches;
@@ -30,6 +31,19 @@ class ServiceProvider extends AddonServiceProvider
 {
     protected $tags = [
         SeoTags::class,
+    ];
+
+    protected $fieldtypes = [
+        SeoPreview::class,
+    ];
+
+    /**
+     * A buildless control panel script: it registers the preview fieldtype
+     * through the globals Statamic exposes (window.Statamic, window.Vue,
+     * window.__STATAMIC__), so there is no bundle to recompile per release.
+     */
+    protected $scripts = [
+        __DIR__.'/../resources/js/cp.js',
     ];
 
     protected $commands = [

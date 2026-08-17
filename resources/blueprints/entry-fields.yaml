@@ -4,6 +4,13 @@ tabs:
     icon: seo
     sections:
       -
+        fields:
+          -
+            handle: seo_preview
+            field:
+              type: seo_preview
+              display: Preview
+      -
         display: 'Search results'
         instructions: 'Leave a field empty to use the site default.'
         fields:
