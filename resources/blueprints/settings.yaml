@@ -60,6 +60,54 @@ tabs:
               default: true
               width: 50
               instructions: 'Only does something on a multi-site installation.'
+      -
+        display: 'Site verification'
+        instructions: 'Paste the code a service gives you when it asks for an HTML tag. Only the code, not the whole tag.'
+        fields:
+          -
+            handle: verify_google
+            field:
+              type: text
+              display: 'Google Search Console'
+              width: 50
+              instructions: 'The `content` value of the `google-site-verification` tag.'
+          -
+            handle: verify_bing
+            field:
+              type: text
+              display: 'Bing Webmaster Tools'
+              width: 50
+          -
+            handle: verify_pinterest
+            field:
+              type: text
+              display: Pinterest
+              width: 50
+          -
+            handle: verify_facebook
+            field:
+              type: text
+              display: 'Facebook domain verification'
+              width: 50
+          -
+            handle: verify_custom
+            field:
+              type: grid
+              display: 'Other verifications'
+              mode: table
+              add_row: 'Add verification'
+              instructions: 'For any service not listed above.'
+              fields:
+                -
+                  handle: name
+                  field:
+                    type: text
+                    display: 'Meta name'
+                -
+                  handle: content
+                  field:
+                    type: text
+                    display: Content
   social:
     display: Social
     sections:
@@ -371,6 +419,68 @@ tabs:
               display: 'Keep a log of 404s'
               default: true
               instructions: 'Shown under SEO → 404 log, where you can turn a 404 into a redirect in one click.'
+  sites:
+    display: Sites
+    sections:
+      -
+        display: 'Per-site overrides'
+        instructions: |
+          Only needed on a multi-site installation. Add a row per site that needs
+          different values; anything left empty falls back to the settings on the
+          other tabs.
+        fields:
+          -
+            handle: site_overrides
+            field:
+              type: grid
+              display: 'Site overrides'
+              mode: stacked
+              add_row: 'Add a site'
+              reorderable: false
+              fields:
+                -
+                  handle: site
+                  field:
+                    type: sites
+                    display: Site
+                    max_items: 1
+                    mode: select
+                    width: 50
+                    validate:
+                      - required
+                -
+                  handle: site_name
+                  field:
+                    type: text
+                    display: 'Site name'
+                    width: 50
+                -
+                  handle: default_description
+                  field:
+                    type: textarea
+                    display: 'Default description'
+                -
+                  handle: default_image
+                  field:
+                    type: assets
+                    display: 'Default sharing image'
+                    max_files: 1
+                -
+                  handle: business_name
+                  field:
+                    type: text
+                    display: 'Legal / trading name'
+                    width: 50
+                -
+                  handle: business_description
+                  field:
+                    type: textarea
+                    display: 'Business description'
+                -
+                  handle: llms_summary
+                  field:
+                    type: textarea
+                    display: 'llms.txt summary'
   ai:
     display: 'AI & robots'
     sections:

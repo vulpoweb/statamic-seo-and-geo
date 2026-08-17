@@ -26,6 +26,8 @@ use Vulpo\Seo\Redirects\NotFoundLog;
 use Vulpo\Seo\Redirects\RedirectRepository;
 use Vulpo\Seo\Redirects\UriLedger;
 use Vulpo\Seo\Tags\SeoTags;
+use Vulpo\Seo\Widgets\AiCrawlersWidget;
+use Vulpo\Seo\Widgets\NotFoundWidget;
 
 class ServiceProvider extends AddonServiceProvider
 {
@@ -35,6 +37,11 @@ class ServiceProvider extends AddonServiceProvider
 
     protected $fieldtypes = [
         SeoPreview::class,
+    ];
+
+    protected $widgets = [
+        NotFoundWidget::class,
+        AiCrawlersWidget::class,
     ];
 
     /**

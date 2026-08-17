@@ -86,3 +86,32 @@ it('leaves out open graph and twitter tags when disabled', function () {
 it('reads nothing from an empty value reader', function () {
     expect(ValueReader::empty()->string('title'))->toBeNull();
 });
+
+it('outputs site verification tags', function () {
+    Settings::swap([
+        'verify_google' => 'abc123',
+        'verify_bing' => 'bing456',
+        'verify_custom' => [
+            ['name' => 'yandex-verification', 'content' => 'yandex789'],
+            ['name' => '', 'content' => 'ignored'],
+        ],
+    ]);
+
+    expect(meta()->render())
+        ->toContain('<meta name="google-site-verification" content="abc123">')
+        ->toContain('<meta name="msvalidate.01" content="bing456">')
+        ->toContain('<meta name="yandex-verification" content="yandex789">')
+        ->not->toContain('ignored');
+});
+
+it('accepts a pasted verification meta tag', function () {
+    Settings::swap([
+        'verify_google' => '<meta name="google-site-verification" content="pasted-code" />',
+    ]);
+
+    expect(meta()->render())->toContain('<meta name="google-site-verification" content="pasted-code">');
+});
+
+it('outputs no verification tags when none are set', function () {
+    expect(meta()->render())->not->toContain('site-verification');
+});
