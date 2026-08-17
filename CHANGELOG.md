@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.1
+
+- Fixed the SEO preview rendering "Component seo_preview-fieldtype does not exist". Addon scripts are emitted before the control panel's own Vite modules, so `window.Statamic` did not exist yet when the script ran; it now waits for the control panel instead of returning early.
+
 ## 1.2.0
 
 - Site verification fields for Google, Bing, Pinterest and Facebook, plus a grid for anything else. A pasted `<meta>` tag is accepted as well as a bare code.

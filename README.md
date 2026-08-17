@@ -141,7 +141,7 @@ Settings and redirects belong in version control. The files in `storage` do not.
 
 The preview field is a normal fieldtype, so you can move it, drop it, or add it to a blueprint of your own by publishing the blueprints and editing them.
 
-The control panel script is deliberately buildless: `resources/js/cp.js` registers the preview component through the globals Statamic exposes (`window.Statamic.$components`, `window.Vue`, `window.__STATAMIC__`), which means there is no npm dependency, no Vite config, and no bundle to rebuild when Statamic ships a new minor version. It is published to `public/vendor/seo/js/` by `php please statamic:install` or `php artisan vendor:publish --tag=seo --force`.
+The control panel script is deliberately buildless: `resources/js/cp.js` registers the preview component through the globals Statamic exposes (`window.Statamic.$components`, `window.Vue`, `window.__STATAMIC__`), which means there is no npm dependency, no Vite config, and no bundle to rebuild when Statamic ships a new minor version. Because addon scripts load before the control panel's own modules, the script waits for `window.Statamic` to appear rather than assuming it is there. It is published to `public/vendor/seo/js/` by `php please statamic:install` or `php artisan vendor:publish --tag=seo --force`.
 
 ## Testing
 
