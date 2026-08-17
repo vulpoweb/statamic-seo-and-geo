@@ -29,6 +29,14 @@ composer require vulpo/seo
 php please vulpo:seo:index-uris
 ```
 
+Working on the addon from a local checkout instead? Point a path repository at it and require `"vulpo/seo": "@dev"`:
+
+```json
+"repositories": [
+    { "type": "path", "url": "../vulpo-seo" }
+]
+```
+
 Then add the tag to your layout's `<head>`:
 
 ```antlers
@@ -107,7 +115,7 @@ Settings and redirects belong in version control. The files in `storage` do not.
 ## Notes and limits
 
 - Redirects run inside the `web` middleware group, after the response. A URL that never reaches Laravel (a real file on disk, a route outside `web`) is not redirected.
-- A physical `public/robots.txt` is served by the web server and wins over this addon.
+- A physical `public/robots.txt` is served by the web server and wins over this addon. Delete it to let the control panel manage robots.txt. On Laravel Herd the generated body is correct but nginx reports a 404 status for `/robots.txt`, because its `error_page` handler keeps the missing-file status; standard nginx/Apache front-controller configs return 200.
 - Automatic redirects react to entry saves. Statamic rewrites child URLs without saving each child, which is why a parent change also adds a `parent/*` wildcard rule.
 - Geocoding uses OpenStreetMap Nominatim, whose usage policy requires a descriptive User-Agent; set `VULPO_SEO_GEOCODER_USER_AGENT` for production.
 
