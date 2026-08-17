@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.2
+
+- The social preview now follows the image the editor picks, reading it from the publish form's meta instead of only the value that was saved.
+- The Google preview says what it does not show: Google takes its thumbnail from the page content, not from the sharing image.
+
 ## 1.2.1
 
 - Fixed the SEO preview rendering "Component seo_preview-fieldtype does not exist". Addon scripts are emitted before the control panel's own Vite modules, so `window.Statamic` did not exist yet when the script ran; it now waits for the control panel instead of returning early.

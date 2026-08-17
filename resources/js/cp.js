@@ -85,13 +85,16 @@
             setup() {
                 const container = ui.publishContextKey ? Vue.inject(ui.publishContextKey, null) : null;
 
-                const values = Vue.computed(() => {
-                    const bag = container && container.values ? container.values : null;
+                const unwrap = (bag) => (bag && (bag.value ?? bag)) || {};
 
-                    return (bag && (bag.value ?? bag)) || {};
-                });
+                const values = Vue.computed(() => unwrap(container && container.values));
 
-                return { values };
+                // The assets fieldtype keeps the picked asset's data in the
+                // publish form's meta, which is how the preview can show a newly
+                // chosen image before the entry is saved.
+                const formMeta = Vue.computed(() => unwrap(container && container.meta));
+
+                return { values, formMeta };
             },
 
             data() {
@@ -148,7 +151,24 @@
                     return (this.preloaded.url || '').replace(/^https?:\/\//, '').split('/')[0];
                 },
 
+                /**
+                 * The asset the editor has picked right now. Falls back to what
+                 * preload() resolved: the saved image, or the site default.
+                 */
                 image() {
+                    const handle = this.handles.image;
+                    const fieldMeta = handle ? this.formMeta[handle] : null;
+                    const picked = fieldMeta && fieldMeta.data ? fieldMeta.data[0] : null;
+
+                    if (picked && !picked.invalid) {
+                        return picked.permalink || picked.url;
+                    }
+
+                    // An emptied field clears the preview rather than falling back.
+                    if (handle && Array.isArray(this.values[handle]) && this.values[handle].length === 0) {
+                        return null;
+                    }
+
                     return this.preloaded.image;
                 },
 
@@ -187,6 +207,9 @@
                             <div style="font-size:12px; color:#4d5156; line-height:1.4;">{{ breadcrumb }}</div>
                             <div style="font-size:20px; line-height:1.3; color:#1a0dab; margin-top:2px;">{{ title.text }}</div>
                             <div style="font-size:14px; line-height:1.58; color:#4d5156; margin-top:4px;">{{ description.text }}</div>
+                            <div class="text-gray-500" style="font-size:.75rem; margin-top:.75rem; font-family: inherit;">
+                                {{ __('Google picks any thumbnail from the page content itself. The sharing image is what social networks and chat apps use.') }}
+                            </div>
                         </div>
 
                         <div v-else style="max-width: 520px;">

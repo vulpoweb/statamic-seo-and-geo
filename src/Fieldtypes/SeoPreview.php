@@ -67,6 +67,7 @@ class SeoPreview extends Fieldtype
                 'title' => 'seo_title',
                 'description' => 'seo_description',
                 'noindex' => 'seo_noindex',
+                'image' => 'seo_image',
             ],
             'fallback_title' => $parent && method_exists($parent, 'value') ? $parent->value('title') : null,
         ];
