@@ -50,7 +50,6 @@
     },
     "extra": {
         "statamic": {
-            "slug": "vulpo-seo",
             "name": "Vulpo SEO",
             "description": "Meta tags, sitemap, redirects, structured data, robots.txt and llms.txt in one addon."
         },

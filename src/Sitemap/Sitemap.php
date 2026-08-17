@@ -42,7 +42,7 @@ class Sitemap
      */
     public function urls(): array
     {
-        $minutes = (int) config('vulpo-seo.sitemap.cache_minutes', 60);
+        $minutes = (int) config('seo.sitemap.cache_minutes', 60);
 
         if ($minutes < 1) {
             return $this->buildUrls();
@@ -72,7 +72,7 @@ class Sitemap
 
         usort($urls, fn (array $a, array $b) => strcmp($a['loc'], $b['loc']));
 
-        return array_slice($urls, 0, (int) config('vulpo-seo.sitemap.max_urls', 5000));
+        return array_slice($urls, 0, (int) config('seo.sitemap.max_urls', 5000));
     }
 
     /**

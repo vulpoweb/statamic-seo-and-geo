@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.2
+
+- Fixed the redirects screen failing to render when installed from vendor (blueprint path resolved one directory too high)
+- Settings and config now use the `seo` slug Statamic derives from the package name; a custom slug meant control panel settings were saved but never read back
+
 ## 1.0.0
 
 Initial release.

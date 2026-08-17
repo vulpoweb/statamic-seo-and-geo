@@ -22,7 +22,7 @@ class InjectFields
 
     public function handleEntryBlueprint(EntryBlueprintFound $event): void
     {
-        if (! config('vulpo-seo.fields.entries', true)) {
+        if (! config('seo.fields.entries', true)) {
             return;
         }
 
@@ -35,7 +35,7 @@ class InjectFields
 
     public function handleTermBlueprint(TermBlueprintFound $event): void
     {
-        if (! config('vulpo-seo.fields.terms', true)) {
+        if (! config('seo.fields.terms', true)) {
             return;
         }
 
@@ -89,6 +89,6 @@ class InjectFields
 
         $handle = Str::after($namespace, $prefix);
 
-        return in_array($handle, (array) config("vulpo-seo.fields.{$configKey}", []), true);
+        return in_array($handle, (array) config("seo.fields.{$configKey}", []), true);
     }
 }

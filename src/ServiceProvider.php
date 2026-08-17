@@ -102,9 +102,9 @@ class ServiceProvider extends AddonServiceProvider
                 ->section('Tools')
                 ->can('view vulpo seo')
                 ->icon($this->navIcon)
-                ->route('addons.settings.edit', 'vulpo-seo')
+                ->route('addons.settings.edit', 'seo')
                 ->children([
-                    $nav->item(__('Settings'))->route('addons.settings.edit', 'vulpo-seo'),
+                    $nav->item(__('Settings'))->route('addons.settings.edit', 'seo'),
                     $nav->item(__('Redirects'))->route('vulpo-seo.redirects.index'),
                     $nav->item(__('404 log'))->route('vulpo-seo.not-found.index'),
                     $nav->item(__('AI crawlers'))->route('vulpo-seo.ai-crawlers.index'),

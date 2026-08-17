@@ -79,10 +79,10 @@ Replace `{{ alt_seo:meta }}` and `{{ structured_data }}` in your layout with `{{
 
 ## Configuration
 
-Editor-facing options live in the control panel. Developer options — routes, caching, field injection, the AI crawler list — live in the config file:
+Editor-facing options live in the control panel. Developer options — routes, caching, field injection, the AI crawler list — live in `config/seo.php` (Statamic derives the name from the package, so the config key is `seo`):
 
 ```bash
-php artisan vendor:publish --tag=vulpo-seo-config
+php artisan vendor:publish --tag=seo-config
 ```
 
 To customise the injected fields:
@@ -106,7 +106,7 @@ Published blueprints in `resources/blueprints/vendor/vulpo-seo/` win over the ad
 
 | What | Where |
 | --- | --- |
-| Settings | `resources/addons/vulpo-seo.yaml` |
+| Settings | `resources/addons/seo.yaml` |
 | Redirects | `content/vulpo-seo/redirects.yaml` |
 | 404 log, AI crawler log, URL index | `storage/app/vulpo-seo/` |
 
@@ -117,6 +117,7 @@ Settings and redirects belong in version control. The files in `storage` do not.
 - Redirects run inside the `web` middleware group, after the response. A URL that never reaches Laravel (a real file on disk, a route outside `web`) is not redirected.
 - A physical `public/robots.txt` is served by the web server and wins over this addon. Delete it to let the control panel manage robots.txt. On Laravel Herd the generated body is correct but nginx reports a 404 status for `/robots.txt`, because its `error_page` handler keeps the missing-file status; standard nginx/Apache front-controller configs return 200.
 - Automatic redirects react to entry saves. Statamic rewrites child URLs without saving each child, which is why a parent change also adds a `parent/*` wildcard rule.
+- The config file is `config/seo.php`, not `config/vulpo-seo.php`. Statamic derives an addon's slug from the package name, and a custom `extra.statamic.slug` breaks core's settings lookup: settings are written to `resources/addons/{slug}.yaml` but read from `resources/addons/{package-name}.yaml`.
 - Geocoding uses OpenStreetMap Nominatim, whose usage policy requires a descriptive User-Agent; set `VULPO_SEO_GEOCODER_USER_AGENT` for production.
 
 ## Testing

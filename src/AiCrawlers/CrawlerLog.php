@@ -46,7 +46,7 @@ class CrawlerLog
         }
 
         /** @var array<string, string> $agents */
-        $agents = config('vulpo-seo.ai_crawlers.agents', []);
+        $agents = config('seo.ai_crawlers.agents', []);
 
         foreach ($agents as $name => $needle) {
             if (stripos($userAgent, (string) $needle) !== false) {
@@ -72,7 +72,7 @@ class CrawlerLog
             'last_seen' => now()->toDateTimeString(),
         ];
 
-        $cutoff = now()->subDays((int) config('vulpo-seo.ai_crawlers.retention_days', 30))->toDateString();
+        $cutoff = now()->subDays((int) config('seo.ai_crawlers.retention_days', 30))->toDateString();
 
         $this->file()->write(collect($rows)
             ->filter(fn (array $row) => $row['date'] >= $cutoff)
@@ -88,6 +88,6 @@ class CrawlerLog
 
     private function file(): YamlFile
     {
-        return YamlFile::inStorage((string) config('vulpo-seo.ai_crawlers.log_path', 'vulpo-seo/ai-crawlers.yaml'));
+        return YamlFile::inStorage((string) config('seo.ai_crawlers.log_path', 'vulpo-seo/ai-crawlers.yaml'));
     }
 }

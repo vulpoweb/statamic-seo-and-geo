@@ -55,7 +55,7 @@ class Fields
     {
         $handles = self::MAP[$key] ?? [$key];
 
-        return config('vulpo-seo.legacy_fallbacks', true) ? $handles : [$handles[0]];
+        return config('seo.legacy_fallbacks', true) ? $handles : [$handles[0]];
     }
 
     /**

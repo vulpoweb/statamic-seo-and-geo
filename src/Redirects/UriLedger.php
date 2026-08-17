@@ -107,6 +107,6 @@ class UriLedger
 
     private function file(): YamlFile
     {
-        return YamlFile::inStorage((string) config('vulpo-seo.redirects.uri_ledger_path', 'vulpo-seo/uris.yaml'));
+        return YamlFile::inStorage((string) config('seo.redirects.uri_ledger_path', 'vulpo-seo/uris.yaml'));
     }
 }

@@ -78,8 +78,8 @@ class TrackUriChanges
 
     private function enabled(): bool
     {
-        return config('vulpo-seo.redirects.enabled', true)
-            && Settings::bool('auto_create_redirects', (bool) config('vulpo-seo.redirects.auto_create_on_slug_change', true));
+        return config('seo.redirects.enabled', true)
+            && Settings::bool('auto_create_redirects', (bool) config('seo.redirects.auto_create_on_slug_change', true));
     }
 
     private function hasChildren(EntryContract $entry): bool

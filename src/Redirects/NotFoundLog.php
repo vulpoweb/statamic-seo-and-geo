@@ -25,7 +25,7 @@ class NotFoundLog
 
     public function record(string $path, ?string $referer = null): void
     {
-        if (! config('vulpo-seo.redirects.log_not_found', true)) {
+        if (! config('seo.redirects.log_not_found', true)) {
             return;
         }
 
@@ -39,7 +39,7 @@ class NotFoundLog
             'referer' => $referer ?: ($entries[$path]['referer'] ?? null),
         ];
 
-        $max = (int) config('vulpo-seo.redirects.not_found_log_max', 500);
+        $max = (int) config('seo.redirects.not_found_log_max', 500);
 
         $this->file()->write(collect($entries)
             ->sortByDesc('last_seen')
@@ -65,6 +65,6 @@ class NotFoundLog
 
     private function file(): YamlFile
     {
-        return YamlFile::inStorage((string) config('vulpo-seo.redirects.not_found_log_path', 'vulpo-seo/not-found.yaml'));
+        return YamlFile::inStorage((string) config('seo.redirects.not_found_log_path', 'vulpo-seo/not-found.yaml'));
     }
 }

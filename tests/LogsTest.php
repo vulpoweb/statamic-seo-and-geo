@@ -20,7 +20,7 @@ it('counts 404s per path', function () {
 });
 
 it('does not log 404s when switched off', function () {
-    config()->set('vulpo-seo.redirects.log_not_found', false);
+    config()->set('seo.redirects.log_not_found', false);
 
     $log = app(NotFoundLog::class);
     $log->record('/missing');
