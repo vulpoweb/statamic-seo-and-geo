@@ -16,12 +16,12 @@ abstract class TestCase extends AddonTestCase
 
         Settings::swap([]);
 
-        config()->set('vulpo-seo.redirects.path', 'storage/framework/testing/redirects.yaml');
-        config()->set('vulpo-seo.redirects.not_found_log_path', 'testing/not-found.yaml');
-        config()->set('vulpo-seo.ai_crawlers.log_path', 'testing/ai-crawlers.yaml');
-        config()->set('vulpo-seo.redirects.uri_ledger_path', 'testing/uris.yaml');
-        config()->set('vulpo-seo.sitemap.cache_minutes', 0);
-        config()->set('vulpo-seo.llms.cache_minutes', 0);
+        config()->set('seo.redirects.path', 'storage/framework/testing/redirects.yaml');
+        config()->set('seo.redirects.not_found_log_path', 'testing/not-found.yaml');
+        config()->set('seo.ai_crawlers.log_path', 'testing/ai-crawlers.yaml');
+        config()->set('seo.redirects.uri_ledger_path', 'testing/uris.yaml');
+        config()->set('seo.sitemap.cache_minutes', 0);
+        config()->set('seo.llms.cache_minutes', 0);
 
         $this->cleanUpFiles();
     }
@@ -38,10 +38,10 @@ abstract class TestCase extends AddonTestCase
     private function cleanUpFiles(): void
     {
         foreach ([
-            base_path((string) config('vulpo-seo.redirects.path')),
-            storage_path('app/'.config('vulpo-seo.redirects.not_found_log_path')),
-            storage_path('app/'.config('vulpo-seo.ai_crawlers.log_path')),
-            storage_path('app/'.config('vulpo-seo.redirects.uri_ledger_path')),
+            base_path((string) config('seo.redirects.path')),
+            storage_path('app/'.config('seo.redirects.not_found_log_path')),
+            storage_path('app/'.config('seo.ai_crawlers.log_path')),
+            storage_path('app/'.config('seo.redirects.uri_ledger_path')),
         ] as $path) {
             if (file_exists($path)) {
                 unlink($path);

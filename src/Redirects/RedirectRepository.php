@@ -146,6 +146,6 @@ class RedirectRepository
 
     private function file(): YamlFile
     {
-        return YamlFile::inProject((string) config('vulpo-seo.redirects.path', 'content/vulpo-seo/redirects.yaml'));
+        return YamlFile::inProject((string) config('seo.redirects.path', 'content/vulpo-seo/redirects.yaml'));
     }
 }

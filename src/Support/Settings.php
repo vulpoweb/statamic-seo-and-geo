@@ -8,7 +8,7 @@ use Statamic\Support\Arr;
 /**
  * Reads the addon's control panel settings.
  *
- * Statamic stores these in `resources/addons/vulpo-seo.yaml` from the settings
+ * Statamic stores these in `resources/addons/seo.yaml` from the settings
  * blueprint (`resources/blueprints/settings.yaml`). Every value arrives as a
  * string because Statamic parses settings through Antlers, so the accessors here
  * cast back to the type the rest of the addon expects.

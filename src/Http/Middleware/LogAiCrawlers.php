@@ -14,7 +14,7 @@ class LogAiCrawlers
 
     public function handle(Request $request, Closure $next): Response
     {
-        if (! config('vulpo-seo.ai_crawlers.enabled', true) || ! Settings::bool('log_ai_crawlers', true)) {
+        if (! config('seo.ai_crawlers.enabled', true) || ! Settings::bool('log_ai_crawlers', true)) {
             return $next($request);
         }
 

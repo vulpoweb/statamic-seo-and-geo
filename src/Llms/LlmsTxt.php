@@ -34,7 +34,7 @@ class LlmsTxt
 
     public function render(): string
     {
-        $minutes = (int) config('vulpo-seo.llms.cache_minutes', 60);
+        $minutes = (int) config('seo.llms.cache_minutes', 60);
 
         if ($minutes < 1) {
             return $this->build();
@@ -92,7 +92,7 @@ class LlmsTxt
     private function pagesByCollection(): array
     {
         $excluded = Settings::list('llms_exclude_collections') ?: Settings::list('sitemap_exclude_collections');
-        $limit = (int) config('vulpo-seo.llms.max_urls', 200);
+        $limit = (int) config('seo.llms.max_urls', 200);
         $grouped = [];
         $count = 0;
 

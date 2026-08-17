@@ -20,7 +20,7 @@ it('adds both tabs to an entry blueprint', function () {
 });
 
 it('skips collections that are excluded in the config', function () {
-    config()->set('vulpo-seo.fields.exclude_collections', ['articles']);
+    config()->set('seo.fields.exclude_collections', ['articles']);
 
     $blueprint = blueprintFor('collections.articles');
 
@@ -30,7 +30,7 @@ it('skips collections that are excluded in the config', function () {
 });
 
 it('skips injection entirely when switched off', function () {
-    config()->set('vulpo-seo.fields.entries', false);
+    config()->set('seo.fields.entries', false);
 
     $blueprint = blueprintFor('collections.articles');
 
