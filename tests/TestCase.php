@@ -4,6 +4,7 @@ namespace Vulpo\Seo\Tests;
 
 use Statamic\Testing\AddonTestCase;
 use Vulpo\Seo\ServiceProvider;
+use Vulpo\Seo\Storage\StorageManager;
 use Vulpo\Seo\Support\Settings;
 
 abstract class TestCase extends AddonTestCase
@@ -22,6 +23,13 @@ abstract class TestCase extends AddonTestCase
         config()->set('seo.redirects.uri_ledger_path', 'testing/uris.yaml');
         config()->set('seo.sitemap.cache_minutes', 0);
         config()->set('seo.llms.cache_minutes', 0);
+
+        // Lets the whole suite be run against database storage with
+        // VULPO_SEO_STORAGE_DRIVER=eloquent, which is what CI does.
+        if (app(StorageManager::class)->isEloquent()) {
+            $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+            $this->artisan('migrate')->run();
+        }
 
         $this->cleanUpFiles();
     }

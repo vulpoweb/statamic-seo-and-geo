@@ -40,6 +40,11 @@ jobs:
       - name: Run tests
         run: vendor/bin/pest --compact
 
+      - name: Run tests with database storage
+        run: vendor/bin/pest --compact
+        env:
+          VULPO_SEO_STORAGE_DRIVER: eloquent
+
   lint:
     runs-on: ubuntu-latest
     name: Code style
