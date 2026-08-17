@@ -1,0 +1,456 @@
+title: 'Vulpo SEO'
+tabs:
+  general:
+    display: General
+    sections:
+      -
+        display: 'Titles & descriptions'
+        instructions: 'Used on every page unless the page fills in its own SEO tab.'
+        fields:
+          -
+            handle: site_name
+            field:
+              type: text
+              display: 'Site name'
+              width: 50
+              instructions: 'Defaults to the name of the site configured in Statamic.'
+          -
+            handle: title_separator
+            field:
+              type: text
+              display: 'Title separator'
+              default: '|'
+              width: 25
+          -
+            handle: append_site_name
+            field:
+              type: toggle
+              display: 'Append site name to titles'
+              default: true
+              width: 25
+          -
+            handle: default_description
+            field:
+              type: textarea
+              display: 'Default description'
+              instructions: 'One or two sentences. Search engines show around 155 characters.'
+      -
+        display: Indexing
+        fields:
+          -
+            handle: noindex_site
+            field:
+              type: toggle
+              display: 'Hide the whole site from search engines'
+              default: false
+              instructions: 'Turn on for staging sites. Adds `noindex` to every page and blocks everything in robots.txt.'
+          -
+            handle: large_image_previews
+            field:
+              type: toggle
+              display: 'Allow large image previews'
+              default: true
+              width: 50
+              instructions: 'Adds `max-image-preview:large`, which lets Google show a big thumbnail.'
+          -
+            handle: hreflang
+            field:
+              type: toggle
+              display: 'Output hreflang tags'
+              default: true
+              width: 50
+              instructions: 'Only does something on a multi-site installation.'
+  social:
+    display: Social
+    sections:
+      -
+        display: 'Sharing previews'
+        instructions: 'What people see when a page is shared on social media or in chat apps.'
+        fields:
+          -
+            handle: open_graph
+            field:
+              type: toggle
+              display: 'Output Open Graph tags'
+              default: true
+              width: 50
+          -
+            handle: twitter_cards
+            field:
+              type: toggle
+              display: 'Output Twitter card tags'
+              default: true
+              width: 50
+          -
+            handle: default_image
+            field:
+              type: assets
+              display: 'Default sharing image'
+              max_files: 1
+              instructions: 'Recommended size 1200 × 630 pixels.'
+          -
+            handle: twitter_handle
+            field:
+              type: text
+              display: 'X / Twitter handle'
+              width: 50
+              instructions: 'Without the @.'
+          -
+            handle: social_profiles
+            field:
+              type: list
+              display: 'Social profile URLs'
+              instructions: 'Full URLs of your profiles. Search engines use these to link your accounts to your organisation.'
+  structured_data:
+    display: 'Structured data'
+    sections:
+      -
+        display: 'What to output'
+        instructions: 'Structured data (JSON-LD) is what powers rich results in Google and what AI assistants quote.'
+        fields:
+          -
+            handle: schema_organization
+            field:
+              type: toggle
+              display: 'Organisation / business'
+              default: true
+              width: 33
+          -
+            handle: schema_website
+            field:
+              type: toggle
+              display: Website
+              default: true
+              width: 33
+          -
+            handle: schema_breadcrumbs
+            field:
+              type: toggle
+              display: Breadcrumbs
+              default: true
+              width: 33
+      -
+        display: 'Your organisation'
+        fields:
+          -
+            handle: business_type
+            field:
+              type: select
+              display: Type
+              default: Organization
+              width: 50
+              instructions: 'Pick a local business type if customers can visit a physical location.'
+              options:
+                Organization: 'Organisation (online, no public location)'
+                LocalBusiness: 'Local business'
+                ProfessionalService: 'Professional service'
+                Store: 'Shop / store'
+                Restaurant: Restaurant
+                CafeOrCoffeeShop: 'Café / coffee shop'
+                MedicalBusiness: 'Medical business'
+                HomeAndConstructionBusiness: 'Home & construction business'
+          -
+            handle: business_name
+            field:
+              type: text
+              display: 'Legal / trading name'
+              width: 50
+              instructions: 'Only fill in if it differs from the site name.'
+          -
+            handle: business_description
+            field:
+              type: textarea
+              display: Description
+              instructions: 'What you do, in one or two sentences. This is the part AI assistants quote.'
+          -
+            handle: logo
+            field:
+              type: assets
+              display: Logo
+              max_files: 1
+          -
+            handle: knows_about
+            field:
+              type: taggable
+              display: 'Areas of expertise'
+              instructions: 'Your main services or skills, one tag each. The strongest signal for AI recommendations.'
+          -
+            handle: area_served
+            field:
+              type: text
+              display: 'Area served'
+              width: 50
+              instructions: 'e.g. "Belgium" or "Ghent region".'
+          -
+            handle: founding_year
+            field:
+              type: text
+              display: 'Founded (year)'
+              width: 50
+      -
+        display: 'Contact & address'
+        fields:
+          -
+            handle: phone
+            field:
+              type: text
+              display: Phone
+              width: 50
+          -
+            handle: email
+            field:
+              type: text
+              display: Email
+              width: 50
+          -
+            handle: address_street
+            field:
+              type: text
+              display: 'Street address'
+          -
+            handle: address_locality
+            field:
+              type: text
+              display: 'City / town'
+              width: 33
+          -
+            handle: postal_code
+            field:
+              type: text
+              display: 'Postal code'
+              width: 33
+          -
+            handle: country_code
+            field:
+              type: text
+              display: 'Country code'
+              width: 33
+              instructions: 'Two letters, e.g. BE, NL, FR.'
+      -
+        display: 'Opening hours'
+        instructions: 'Only used for local business types. Add two rows for a day with a lunch break.'
+        fields:
+          -
+            handle: opening_hours
+            field:
+              type: grid
+              display: 'Opening hours'
+              mode: table
+              add_row: 'Add opening time'
+              reorderable: true
+              unless:
+                business_type: 'equals Organization'
+              fields:
+                -
+                  handle: day
+                  field:
+                    type: select
+                    display: Day
+                    options:
+                      Monday: Monday
+                      Tuesday: Tuesday
+                      Wednesday: Wednesday
+                      Thursday: Thursday
+                      Friday: Friday
+                      Saturday: Saturday
+                      Sunday: Sunday
+                -
+                  handle: opens
+                  field:
+                    type: time
+                    display: Opens
+                -
+                  handle: closes
+                  field:
+                    type: time
+                    display: Closes
+          -
+            handle: price_range
+            field:
+              type: text
+              display: 'Price range'
+              width: 50
+              instructions: 'Optional, e.g. "€€" or "€10–€50".'
+              unless:
+                business_type: 'equals Organization'
+      -
+        display: Coordinates
+        instructions: 'Leave blank. Coordinates are looked up from the address for free, and cached.'
+        fields:
+          -
+            handle: geo_lat
+            field:
+              type: text
+              display: Latitude
+              width: 50
+          -
+            handle: geo_lng
+            field:
+              type: text
+              display: Longitude
+              width: 50
+  sitemap:
+    display: Sitemap
+    sections:
+      -
+        fields:
+          -
+            handle: sitemap_enabled
+            field:
+              type: toggle
+              display: 'Serve an XML sitemap'
+              default: true
+              instructions: 'Available at `/sitemap.xml`.'
+          -
+            handle: sitemap_exclude_collections
+            field:
+              type: collections
+              display: 'Exclude collections'
+              mode: select
+              instructions: 'Pages in these collections stay out of the sitemap.'
+          -
+            handle: sitemap_include_terms
+            field:
+              type: toggle
+              display: 'Include taxonomy term pages'
+              default: false
+              width: 50
+          -
+            handle: sitemap_exclude_taxonomies
+            field:
+              type: taxonomies
+              display: 'Exclude taxonomies'
+              mode: select
+              if:
+                sitemap_include_terms: 'equals true'
+          -
+            handle: sitemap_changefreq
+            field:
+              type: select
+              display: 'Change frequency'
+              clearable: true
+              width: 50
+              instructions: 'Optional hint. Leave empty to omit it.'
+              options:
+                always: always
+                hourly: hourly
+                daily: daily
+                weekly: weekly
+                monthly: monthly
+                yearly: yearly
+                never: never
+          -
+            handle: sitemap_priority
+            field:
+              type: select
+              display: Priority
+              clearable: true
+              width: 50
+              instructions: 'Optional hint. Leave empty to omit it.'
+              options:
+                '1.0': '1.0'
+                '0.8': '0.8'
+                '0.5': '0.5'
+                '0.3': '0.3'
+  redirects:
+    display: Redirects
+    sections:
+      -
+        fields:
+          -
+            handle: auto_create_redirects
+            field:
+              type: toggle
+              display: 'Create redirects automatically when a page URL changes'
+              default: true
+              instructions: 'Keeps old links working when someone renames a page.'
+          -
+            handle: log_not_found
+            field:
+              type: toggle
+              display: 'Keep a log of 404s'
+              default: true
+              instructions: 'Shown under SEO → 404 log, where you can turn a 404 into a redirect in one click.'
+  ai:
+    display: 'AI & robots'
+    sections:
+      -
+        display: 'llms.txt'
+        instructions: 'A plain text summary of your site at `/llms.txt`, the convention AI assistants use to read a site efficiently.'
+        fields:
+          -
+            handle: llms_enabled
+            field:
+              type: toggle
+              display: 'Serve llms.txt'
+              default: true
+          -
+            handle: llms_summary
+            field:
+              type: textarea
+              display: Summary
+              instructions: 'One or two sentences. Falls back to the structured data description.'
+          -
+            handle: llms_intro
+            field:
+              type: textarea
+              display: 'Extra information'
+              instructions: 'Optional markdown, added below the summary. Good place for what you want AI assistants to know.'
+          -
+            handle: llms_exclude_collections
+            field:
+              type: collections
+              display: 'Exclude collections'
+              mode: select
+              instructions: 'Defaults to the collections excluded from the sitemap.'
+      -
+        display: 'robots.txt'
+        instructions: 'Only used when there is no `public/robots.txt` file, because the web server serves that one first.'
+        fields:
+          -
+            handle: robots_enabled
+            field:
+              type: toggle
+              display: 'Serve robots.txt'
+              default: true
+          -
+            handle: robots_disallow
+            field:
+              type: textarea
+              display: 'Disallowed paths'
+              instructions: 'One path per line. Defaults to the control panel URL.'
+          -
+            handle: robots_extra
+            field:
+              type: textarea
+              display: 'Extra lines'
+              instructions: 'Appended verbatim to robots.txt.'
+      -
+        display: 'AI crawlers'
+        fields:
+          -
+            handle: ai_crawler_policy
+            field:
+              type: select
+              display: 'AI crawler policy'
+              default: allow
+              instructions: 'Whether AI crawlers may use your content. Being readable is what gets you recommended by assistants.'
+              options:
+                allow: 'Allow all AI crawlers'
+                block: 'Block all AI crawlers'
+                custom: 'Block only the ones I pick'
+          -
+            handle: blocked_ai_crawlers
+            field:
+              type: taggable
+              display: 'Blocked crawlers'
+              instructions: 'User agent names, e.g. `GPTBot`, `CCBot`.'
+              if:
+                ai_crawler_policy: 'equals custom'
+          -
+            handle: log_ai_crawlers
+            field:
+              type: toggle
+              display: 'Log AI crawler visits'
+              default: true
+              instructions: 'Shown under SEO → AI crawlers.'

@@ -1,0 +1,71 @@
+title: Redirects
+tabs:
+  main:
+    display: Redirects
+    sections:
+      -
+        fields:
+          -
+            handle: redirects
+            field:
+              type: grid
+              display: Redirects
+              mode: table
+              add_row: 'Add redirect'
+              reorderable: true
+              instructions: |
+                Rules are checked from top to bottom, and only for URLs that would
+                otherwise show a 404 page. **From** is a path on this site, **to**
+                can be a path or a full URL.
+              fields:
+                -
+                  handle: from
+                  field:
+                    type: text
+                    display: From
+                    instructions: 'e.g. /old-page'
+                    validate:
+                      - required
+                -
+                  handle: to
+                  field:
+                    type: text
+                    display: To
+                    instructions: 'e.g. /new-page'
+                    validate:
+                      - required
+                -
+                  handle: status
+                  field:
+                    type: select
+                    display: Type
+                    default: 301
+                    cast_booleans: false
+                    options:
+                      301: 'Permanent (301)'
+                      302: 'Temporary (302)'
+                      410: 'Gone (410)'
+                -
+                  handle: match
+                  field:
+                    type: select
+                    display: Match
+                    default: exact
+                    options:
+                      exact: 'Exact path'
+                      wildcard: 'Wildcard (*)'
+                      regex: 'Regex'
+                -
+                  handle: active
+                  field:
+                    type: toggle
+                    display: Active
+                    default: true
+                -
+                  handle: source
+                  field:
+                    type: text
+                    display: Source
+                    read_only: true
+                    visibility: read_only
+                    instructions: 'Set automatically when a slug changes.'

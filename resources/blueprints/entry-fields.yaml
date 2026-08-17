@@ -1,0 +1,185 @@
+tabs:
+  vulpo_seo:
+    display: SEO
+    icon: seo
+    sections:
+      -
+        display: 'Search results'
+        instructions: 'Leave a field empty to use the site default.'
+        fields:
+          -
+            handle: seo_title
+            field:
+              type: text
+              display: 'Page title'
+              instructions: 'Shown as the clickable line in Google. Around 60 characters fit.'
+          -
+            handle: seo_description
+            field:
+              type: textarea
+              display: Description
+              instructions: 'The grey text below the title in Google. Around 155 characters fit.'
+          -
+            handle: seo_image
+            field:
+              type: assets
+              display: 'Sharing image'
+              max_files: 1
+              instructions: 'Used when this page is shared on social media or in chat apps.'
+      -
+        display: Advanced
+        fields:
+          -
+            handle: seo_canonical
+            field:
+              type: text
+              display: 'Canonical URL'
+              instructions: 'Only fill in when this page duplicates another one, to point search engines at the original.'
+          -
+            handle: seo_noindex
+            field:
+              type: toggle
+              display: 'Hide from search engines'
+              default: false
+              width: 50
+          -
+            handle: seo_nofollow
+            field:
+              type: toggle
+              display: 'Do not follow links on this page'
+              default: false
+              width: 50
+          -
+            handle: seo_sitemap_exclude
+            field:
+              type: toggle
+              display: 'Leave out of the sitemap'
+              default: false
+              width: 50
+  vulpo_seo_schema:
+    display: 'Structured data'
+    icon: code
+    sections:
+      -
+        display: 'Rich results for search & AI'
+        instructions: 'Optional. Extra information that helps Google and AI assistants understand this page. Leave the type on "None" if unsure.'
+        fields:
+          -
+            handle: seo_schema_type
+            field:
+              type: select
+              display: 'Page type'
+              default: none
+              width: 50
+              options:
+                none: None
+                faq: 'FAQ (questions & answers)'
+                article: 'Article / blog post'
+                service: Service
+                person: 'Person / team member'
+          -
+            handle: seo_schema_faqs
+            field:
+              type: grid
+              display: 'Frequently asked questions'
+              mode: stacked
+              add_row: 'Add question'
+              reorderable: true
+              instructions: 'Each question and answer can appear directly in Google and in AI answers.'
+              if:
+                seo_schema_type: 'equals faq'
+              fields:
+                -
+                  handle: question
+                  field:
+                    type: text
+                    display: Question
+                -
+                  handle: answer
+                  field:
+                    type: textarea
+                    display: Answer
+          -
+            handle: seo_schema_article_headline
+            field:
+              type: text
+              display: Headline
+              instructions: 'Defaults to the page title.'
+              if:
+                seo_schema_type: 'equals article'
+          -
+            handle: seo_schema_article_description
+            field:
+              type: textarea
+              display: Description
+              if:
+                seo_schema_type: 'equals article'
+          -
+            handle: seo_schema_article_author
+            field:
+              type: text
+              display: 'Author name'
+              width: 50
+              if:
+                seo_schema_type: 'equals article'
+          -
+            handle: seo_schema_article_published
+            field:
+              type: date
+              display: 'Published date'
+              time_enabled: false
+              width: 50
+              if:
+                seo_schema_type: 'equals article'
+          -
+            handle: seo_schema_article_image
+            field:
+              type: assets
+              display: Image
+              max_files: 1
+              instructions: 'Defaults to the sharing image on the SEO tab.'
+              if:
+                seo_schema_type: 'equals article'
+          -
+            handle: seo_schema_service_name
+            field:
+              type: text
+              display: 'Service name'
+              width: 50
+              instructions: 'Defaults to the page title.'
+              if:
+                seo_schema_type: 'equals service'
+          -
+            handle: seo_schema_service_area
+            field:
+              type: text
+              display: 'Area served'
+              width: 50
+              instructions: 'Defaults to the area served in the SEO settings.'
+              if:
+                seo_schema_type: 'equals service'
+          -
+            handle: seo_schema_service_description
+            field:
+              type: textarea
+              display: 'Service description'
+              if:
+                seo_schema_type: 'equals service'
+          -
+            handle: seo_schema_person_name
+            field:
+              type: text
+              display: 'Full name'
+              width: 50
+              instructions: 'Defaults to the page title.'
+              if:
+                seo_schema_type: 'equals person'
+          -
+            handle: seo_schema_person_job
+            field:
+              type: text
+              display: 'Job title'
+              width: 50
+              instructions: 'e.g. "Founder", "Lead developer".'
+              if:
+                seo_schema_type: 'equals person'

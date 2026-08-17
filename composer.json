@@ -1,0 +1,72 @@
+{
+    "name": "vulpo/seo",
+    "description": "All-in-one SEO toolkit for Statamic: meta tags, sitemap, redirects, structured data, robots.txt and llms.txt.",
+    "type": "statamic-addon",
+    "license": "MIT",
+    "keywords": [
+        "statamic",
+        "seo",
+        "sitemap",
+        "redirects",
+        "structured-data",
+        "json-ld",
+        "llms-txt"
+    ],
+    "homepage": "https://github.com/vulpo-be/vulpo-seo",
+    "authors": [
+        {
+            "name": "Vulpo",
+            "email": "hello@vulpo.be",
+            "homepage": "https://vulpo.be"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/vulpo-be/vulpo-seo/issues",
+        "source": "https://github.com/vulpo-be/vulpo-seo"
+    },
+    "require": {
+        "php": "^8.3",
+        "statamic/cms": "^6.0"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.27",
+        "orchestra/testbench": "^10.8 || ^11.0",
+        "pestphp/pest": "^4.0 || ^5.0",
+        "pestphp/pest-plugin-laravel": "^4.0 || ^5.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Vulpo\\Seo\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Vulpo\\Seo\\Tests\\": "tests"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/pest",
+        "lint": "vendor/bin/pint"
+    },
+    "extra": {
+        "statamic": {
+            "slug": "vulpo-seo",
+            "name": "Vulpo SEO",
+            "description": "Meta tags, sitemap, redirects, structured data, robots.txt and llms.txt in one addon."
+        },
+        "laravel": {
+            "providers": [
+                "Vulpo\\Seo\\ServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "php-http/discovery": false
+        },
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

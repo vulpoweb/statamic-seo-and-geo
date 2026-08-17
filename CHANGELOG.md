@@ -1,0 +1,16 @@
+# Changelog
+
+## 1.0.0
+
+Initial release.
+
+- Meta tags: title, description, canonical, robots, Open Graph, Twitter cards, hreflang
+- XML sitemap with per-page and per-collection exclusions
+- Redirects with exact, wildcard and regex matching, plus automatic redirects on URL changes
+- 404 log with one-click redirect creation
+- Structured data: Organization / LocalBusiness, WebSite, BreadcrumbList, FAQ, Article, Service, Person
+- Free geocoding through OpenStreetMap Nominatim
+- `llms.txt` and control-panel-managed `robots.txt` with an AI crawler policy
+- AI crawler visit log
+- `vulpo:seo:migrate` for data from alt-seo, alt-sitemap, alt-redirects and vulpo/geo
+- `vulpo:seo:index-uris` to prime the URL index used by automatic redirects

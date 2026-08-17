@@ -1,0 +1,127 @@
+# Vulpo SEO
+
+One addon for everything a Statamic site needs to be found: meta tags, an XML sitemap, redirects, structured data, `robots.txt` and `llms.txt`.
+
+It replaces the stack many Statamic sites run today — `alt-design/alt-seo`, `alt-design/alt-sitemap`, `alt-design/alt-redirects` and `vulpo/geo` — with a single set of settings, one CP section, and one template tag. Data from those addons is read as a fallback, and a migration command moves it over.
+
+## Features
+
+**Meta tags** — title, description, canonical, robots, Open Graph, Twitter cards and hreflang from one tag. Per-page fields override site-wide defaults.
+
+**Sitemap** — `/sitemap.xml`, built from published, routable entries (and optionally taxonomy terms), with per-page "leave out of the sitemap" and collection exclusions. Cached, and flushed when content changes.
+
+**Redirects** — a CP screen with exact, wildcard and regex rules (301, 302, 410). Redirects are checked only when a URL would otherwise 404, so normal page loads pay nothing. When a page's URL changes — renamed slug, moved in the structure, changed date — a redirect is created automatically, plus a wildcard rule for its children.
+
+**404 log** — every miss is logged with hit counts and referrer, and can be turned into a redirect in one click.
+
+**Structured data (JSON-LD)** — Organization or LocalBusiness, WebSite, BreadcrumbList, and a per-page FAQ, Article, Service or Person node. Coordinates are geocoded from the address for free through OpenStreetMap and cached.
+
+**llms.txt** — `/llms.txt` describing the site and its pages for AI assistants, with an editable summary.
+
+**robots.txt** — served from the CP when there is no `public/robots.txt`, with an AI crawler policy (allow all, block all, or pick).
+
+**AI crawler log** — see which assistants (ChatGPT, Claude, Perplexity, Gemini, …) actually read the site.
+
+## Installation
+
+```bash
+composer require vulpo/seo
+php please vulpo:seo:index-uris
+```
+
+Then add the tag to your layout's `<head>`:
+
+```antlers
+{{ vulpo_seo }}
+```
+
+`vulpo:seo:index-uris` records where every page currently lives. Automatic redirects compare against that index, so run it once after installing. It maintains itself afterwards.
+
+Settings live in the control panel under **Tools → SEO**. The SEO and Structured data tabs are added to every entry and term blueprint automatically.
+
+## Tags
+
+| Tag | Output |
+| --- | --- |
+| `{{ vulpo_seo }}` | Meta tags and JSON-LD — everything for the `<head>` |
+| `{{ vulpo_seo:meta }}` | Meta tags only |
+| `{{ vulpo_seo:schema }}` | JSON-LD only |
+| `{{ vulpo_seo:title }}` | The resolved page title, as text |
+| `{{ vulpo_seo:description }}` | The resolved page description, as text |
+| `{{ vulpo_seo:image }}` | The resolved social image URL |
+
+In Blade:
+
+```blade
+{!! Statamic::tag('vulpo_seo') !!}
+```
+
+## Migrating from alt-seo, alt-sitemap, alt-redirects or vulpo/geo
+
+```bash
+php please vulpo:seo:migrate --dry-run   # see what would change
+php please vulpo:seo:migrate
+```
+
+The command renames legacy field handles on every entry and term (`alt_seo_meta_title` → `seo_title`, `geo_faqs` → `seo_schema_faqs`, …), copies the old global settings into the addon settings, and imports any redirects it finds.
+
+Until you run it, legacy handles are still read at render time, so nothing breaks the moment you swap addons. Set `legacy_fallbacks` to `false` in the config once you have migrated.
+
+Replace `{{ alt_seo:meta }}` and `{{ structured_data }}` in your layout with `{{ vulpo_seo }}`, then remove the old addons from `composer.json`.
+
+## Configuration
+
+Editor-facing options live in the control panel. Developer options — routes, caching, field injection, the AI crawler list — live in the config file:
+
+```bash
+php artisan vendor:publish --tag=vulpo-seo-config
+```
+
+To customise the injected fields:
+
+```bash
+php artisan vendor:publish --tag=vulpo-seo-blueprints
+```
+
+Published blueprints in `resources/blueprints/vendor/vulpo-seo/` win over the addon's own.
+
+### Field handles
+
+| Handle | Purpose |
+| --- | --- |
+| `seo_title`, `seo_description`, `seo_image` | Search results and sharing previews |
+| `seo_canonical`, `seo_noindex`, `seo_nofollow` | Indexing |
+| `seo_sitemap_exclude` | Leave the page out of the sitemap |
+| `seo_schema_type` + `seo_schema_*` | Per-page structured data |
+
+## Where data lives
+
+| What | Where |
+| --- | --- |
+| Settings | `resources/addons/vulpo-seo.yaml` |
+| Redirects | `content/vulpo-seo/redirects.yaml` |
+| 404 log, AI crawler log, URL index | `storage/app/vulpo-seo/` |
+
+Settings and redirects belong in version control. The files in `storage` do not.
+
+## Notes and limits
+
+- Redirects run inside the `web` middleware group, after the response. A URL that never reaches Laravel (a real file on disk, a route outside `web`) is not redirected.
+- A physical `public/robots.txt` is served by the web server and wins over this addon.
+- Automatic redirects react to entry saves. Statamic rewrites child URLs without saving each child, which is why a parent change also adds a `parent/*` wildcard rule.
+- Geocoding uses OpenStreetMap Nominatim, whose usage policy requires a descriptive User-Agent; set `VULPO_SEO_GEOCODER_USER_AGENT` for production.
+
+## Testing
+
+```bash
+composer install
+composer test
+```
+
+## Credits
+
+Built by [Vulpo](https://vulpo.be). Inspired by the MIT-licensed `alt-design/alt-seo` and `alt-design/alt-sitemap` addons, whose field-injection approach showed the way.
+
+## License
+
+MIT. See [LICENSE.md](LICENSE.md).
