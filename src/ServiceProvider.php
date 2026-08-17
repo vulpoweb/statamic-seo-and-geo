@@ -51,6 +51,15 @@ class ServiceProvider extends AddonServiceProvider
 
     protected $viewNamespace = 'vulpo-seo';
 
+    /**
+     * Statamic publishes this to public/vendor/seo/css and links it in the CP head.
+     * Utility classes cannot be used in addon views, because the control panel
+     * bundle is compiled from Statamic's own source.
+     */
+    protected $stylesheets = [
+        __DIR__.'/../resources/css/cp.css',
+    ];
+
     protected string $navIcon = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/><path d="M8 11h6M11 8v6"/></svg>';
 
     public function register(): void
