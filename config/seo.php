@@ -4,6 +4,33 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Storage
+    |--------------------------------------------------------------------------
+    |
+    | Where the addon keeps the data it owns: redirects, the 404 log, the AI
+    | crawler log and the URL index. Entry and term fields are stored by Statamic
+    | itself, and the control panel settings by Statamic's addon settings
+    | repository, so both already follow whatever driver the site uses.
+    |
+    | "auto" follows statamic/eloquent-driver: a site keeping its content in the
+    | database gets database tables here too. Set "file" or "eloquent" to decide
+    | for yourself.
+    |
+    */
+
+    'storage' => [
+        'driver' => env('VULPO_SEO_STORAGE_DRIVER', 'auto'),
+
+        'tables' => [
+            'redirects' => 'vulpo_seo_redirects',
+            'not_found' => 'vulpo_seo_not_found',
+            'ai_crawlers' => 'vulpo_seo_ai_crawlers',
+            'uris' => 'vulpo_seo_uris',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Field injection
     |--------------------------------------------------------------------------
     |

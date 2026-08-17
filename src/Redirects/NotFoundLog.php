@@ -3,22 +3,32 @@
 namespace Vulpo\Seo\Redirects;
 
 use Illuminate\Support\Collection;
-use Vulpo\Seo\Support\YamlFile;
+use Vulpo\Seo\Storage\RowRepository;
 
 /**
  * Remembers which URLs returned a 404, so an editor can turn the ones that
- * matter into redirects. Disposable data, so it lives in storage rather than
- * in the content directory.
+ * matter into redirects. Disposable data: it lives outside the content
+ * directory, in storage or in the database.
  */
 class NotFoundLog
 {
+    public function __construct(private readonly RowRepository $rows) {}
+
     /**
      * @return Collection<int, array{path: string, hits: int, last_seen: string, referer: string|null}>
      */
     public function all(): Collection
     {
-        return collect($this->file()->read())
-            ->filter(fn ($row) => is_array($row) && isset($row['path']))
+        return collect($this->rows->all())
+            ->filter(fn (array $row) => isset($row['path']))
+            // Storage may leave out a null referer, so guarantee the shape here
+            // rather than making every caller defensive.
+            ->map(fn (array $row) => [
+                'path' => (string) $row['path'],
+                'hits' => (int) ($row['hits'] ?? 0),
+                'last_seen' => (string) ($row['last_seen'] ?? ''),
+                'referer' => $row['referer'] ?? null,
+            ])
             ->sortByDesc('last_seen')
             ->values();
     }
@@ -29,42 +39,26 @@ class NotFoundLog
             return;
         }
 
-        $path = Redirect::normalize($path);
-        $entries = $this->all()->keyBy('path')->all();
+        $this->rows->bump(
+            keys: ['path' => Redirect::normalize($path)],
+            counter: 'hits',
+            // A later hit without a referer must not wipe the one we already have.
+            values: array_filter([
+                'last_seen' => now()->toDateTimeString(),
+                'referer' => $referer,
+            ], fn ($value) => $value !== null),
+        );
 
-        $entries[$path] = [
-            'path' => $path,
-            'hits' => (int) ($entries[$path]['hits'] ?? 0) + 1,
-            'last_seen' => now()->toDateTimeString(),
-            'referer' => $referer ?: ($entries[$path]['referer'] ?? null),
-        ];
-
-        $max = (int) config('seo.redirects.not_found_log_max', 500);
-
-        $this->file()->write(collect($entries)
-            ->sortByDesc('last_seen')
-            ->take($max)
-            ->values()
-            ->all());
+        $this->rows->keepNewest('last_seen', (int) config('seo.redirects.not_found_log_max', 500));
     }
 
     public function forget(string $path): void
     {
-        $path = Redirect::normalize($path);
-
-        $this->file()->write($this->all()
-            ->reject(fn (array $row) => $row['path'] === $path)
-            ->values()
-            ->all());
+        $this->rows->delete(['path' => Redirect::normalize($path)]);
     }
 
     public function clear(): void
     {
-        $this->file()->write([]);
-    }
-
-    private function file(): YamlFile
-    {
-        return YamlFile::inStorage((string) config('seo.redirects.not_found_log_path', 'vulpo-seo/not-found.yaml'));
+        $this->rows->truncate();
     }
 }

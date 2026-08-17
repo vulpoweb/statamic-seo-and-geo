@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.0
+
+- Works with statamic/eloquent-driver. Redirects, the 404 log, the AI crawler log and the URL index move to database tables on a site that keeps its content in the database, and stay in flat files on one that does not. Detection follows the eloquent driver's own configuration and can be overridden with `seo.storage.driver`.
+- `php please vulpo:seo:import-to-database` brings existing flat file data over, without deleting the files.
+- Settings already followed the site: they are read through Statamic's addon settings repository, which the eloquent driver implements for the database.
+
 ## 1.2.3
 
 - The Google preview is readable in dark mode. It now renders on its own white surface with Google's colours, instead of putting Google's light-mode blue and grey straight onto the control panel's dark background.

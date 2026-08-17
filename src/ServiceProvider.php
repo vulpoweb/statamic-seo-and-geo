@@ -14,6 +14,7 @@ use Statamic\Facades\CP\Nav;
 use Statamic\Facades\Permission;
 use Statamic\Providers\AddonServiceProvider;
 use Vulpo\Seo\AiCrawlers\CrawlerLog;
+use Vulpo\Seo\Console\ImportToDatabaseCommand;
 use Vulpo\Seo\Console\IndexUrisCommand;
 use Vulpo\Seo\Console\MigrateCommand;
 use Vulpo\Seo\Fieldtypes\SeoPreview;
@@ -25,6 +26,7 @@ use Vulpo\Seo\Listeners\TrackUriChanges;
 use Vulpo\Seo\Redirects\NotFoundLog;
 use Vulpo\Seo\Redirects\RedirectRepository;
 use Vulpo\Seo\Redirects\UriLedger;
+use Vulpo\Seo\Storage\StorageManager;
 use Vulpo\Seo\Tags\SeoTags;
 use Vulpo\Seo\Widgets\AiCrawlersWidget;
 use Vulpo\Seo\Widgets\NotFoundWidget;
@@ -56,6 +58,7 @@ class ServiceProvider extends AddonServiceProvider
     protected $commands = [
         MigrateCommand::class,
         IndexUrisCommand::class,
+        ImportToDatabaseCommand::class,
     ];
 
     protected $routes = [
@@ -78,10 +81,25 @@ class ServiceProvider extends AddonServiceProvider
     {
         parent::register();
 
-        $this->app->singleton(RedirectRepository::class);
-        $this->app->singleton(NotFoundLog::class);
-        $this->app->singleton(UriLedger::class);
-        $this->app->singleton(CrawlerLog::class);
+        $this->app->singleton(StorageManager::class);
+
+        // Each store gets the repository the storage driver decides on: YAML on a
+        // flat-file site, a database table on an eloquent-driver site.
+        $this->app->singleton(RedirectRepository::class, fn ($app) => new RedirectRepository(
+            $app[StorageManager::class]->repository(StorageManager::REDIRECTS),
+        ));
+
+        $this->app->singleton(NotFoundLog::class, fn ($app) => new NotFoundLog(
+            $app[StorageManager::class]->repository(StorageManager::NOT_FOUND),
+        ));
+
+        $this->app->singleton(CrawlerLog::class, fn ($app) => new CrawlerLog(
+            $app[StorageManager::class]->repository(StorageManager::AI_CRAWLERS),
+        ));
+
+        $this->app->singleton(UriLedger::class, fn ($app) => new UriLedger(
+            $app[StorageManager::class]->repository(StorageManager::URIS),
+        ));
     }
 
     public function bootAddon(): void
@@ -90,9 +108,27 @@ class ServiceProvider extends AddonServiceProvider
             __DIR__.'/../resources/blueprints' => resource_path('blueprints/vendor/vulpo-seo'),
         ], 'vulpo-seo-blueprints');
 
+        $this->bootStorage();
+
         $this->registerListeners();
         $this->registerPermissions();
         $this->registerNav();
+    }
+
+    /**
+     * The migrations only matter to a site storing the addon's data in the
+     * database, so a flat-file project never has them in its migration list.
+     * They are publishable either way, for projects that keep migrations local.
+     */
+    private function bootStorage(): void
+    {
+        $this->publishes([
+            __DIR__.'/../database/migrations' => database_path('migrations'),
+        ], 'seo-migrations');
+
+        if ($this->app[StorageManager::class]->isEloquent()) {
+            $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+        }
     }
 
     private function registerListeners(): void

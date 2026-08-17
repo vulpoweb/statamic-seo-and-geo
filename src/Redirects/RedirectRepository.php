@@ -3,24 +3,26 @@
 namespace Vulpo\Seo\Redirects;
 
 use Illuminate\Support\Collection;
-use Vulpo\Seo\Support\YamlFile;
+use Vulpo\Seo\Storage\RowRepository;
 
 /**
- * Stores redirects in a YAML file inside the project, so they travel with the
- * content in version control.
+ * Redirects, kept either in a YAML file inside the project (so they travel with
+ * the content in version control) or in the database on an eloquent-driver site.
+ * Which one is decided by Vulpo\Seo\Storage\StorageManager.
  */
 class RedirectRepository
 {
     /** @var Collection<int, Redirect>|null */
     private ?Collection $redirects = null;
 
+    public function __construct(private readonly RowRepository $rows) {}
+
     /**
      * @return Collection<int, Redirect>
      */
     public function all(): Collection
     {
-        return $this->redirects ??= collect($this->file()->read())
-            ->filter(fn ($row) => is_array($row))
+        return $this->redirects ??= collect($this->rows->all())
             ->map(fn (array $row) => Redirect::fromArray($row))
             ->filter->isValid()
             ->values();
@@ -139,13 +141,8 @@ class RedirectRepository
      */
     private function write(Collection $redirects): void
     {
-        $this->file()->write($redirects->map->toArray()->all());
+        $this->rows->replace($redirects->map->toArray()->all());
 
         $this->redirects = $redirects;
-    }
-
-    private function file(): YamlFile
-    {
-        return YamlFile::inProject((string) config('seo.redirects.path', 'content/vulpo-seo/redirects.yaml'));
     }
 }

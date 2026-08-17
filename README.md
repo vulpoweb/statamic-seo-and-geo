@@ -120,6 +120,8 @@ Published blueprints in `resources/blueprints/vendor/vulpo-seo/` win over the ad
 
 ## Where data lives
 
+Flat file by default:
+
 | What | Where |
 | --- | --- |
 | Settings | `resources/addons/seo.yaml` |
@@ -128,10 +130,56 @@ Published blueprints in `resources/blueprints/vendor/vulpo-seo/` win over the ad
 
 Settings and redirects belong in version control. The files in `storage` do not.
 
+### With statamic/eloquent-driver
+
+The addon follows the site. Install the eloquent driver and switch any of its
+repositories to `eloquent`, and everything the addon owns moves to the database
+too — no configuration needed:
+
+| What | Where |
+| --- | --- |
+| Entry and term SEO fields | Wherever Statamic stores entries and terms |
+| Settings | `addon_settings` table, through Statamic's own settings repository |
+| Redirects | `vulpo_seo_redirects` |
+| 404 log | `vulpo_seo_not_found` |
+| AI crawler log | `vulpo_seo_ai_crawlers` |
+| URL index | `vulpo_seo_uris` |
+
+The addon's migrations load only when its storage resolves to `eloquent`, so a
+flat-file project never sees them. On a database site:
+
+```bash
+php artisan migrate
+php please vulpo:seo:import-to-database   # optional, brings existing flat file data over
+php please statamic:eloquent:import-addon-settings  # Statamic's own, for the settings
+```
+
+`import-to-database` leaves the flat files alone, so switching back is a config
+change. Re-running it updates rather than duplicating.
+
+Override the detection when you want to decide yourself:
+
+```php
+// config/seo.php
+'storage' => [
+    'driver' => 'file', // or 'eloquent', default 'auto'
+],
+```
+
+or `VULPO_SEO_STORAGE_DRIVER=eloquent` in `.env`. Table names are configurable in
+the same block.
+
 ## Notes and limits
 
 - Redirects run inside the `web` middleware group, after the response. A URL that never reaches Laravel (a real file on disk, a route outside `web`) is not redirected.
-- A physical `public/robots.txt` is served by the web server and wins over this addon. Delete it to let the control panel manage robots.txt. On Laravel Herd the generated body is correct but nginx reports a 404 status for `/robots.txt`, because its `error_page` handler keeps the missing-file status; standard nginx/Apache front-controller configs return 200.
+- A physical `public/robots.txt` is served by the web server and wins over this addon. Delete it to let the control panel manage robots.txt.
+- On Laravel Herd and Valet, `/robots.txt` comes back with the right body but a 404 status. Their nginx template gives it an exact-match location with no `try_files`, so nginx looks only for a static file, and the `error_page 404` handler then renders through PHP while keeping the 404. Sitemap and llms.txt are unaffected because they have no such block. Production nginx and Apache configs return 200. To fix it locally, edit the site's config in `~/Library/Application Support/Herd/config/valet/Nginx/<site>` (Valet: `~/.config/valet/Nginx/<site>`):
+
+  ```nginx
+  location = /robots.txt  { access_log off; log_not_found off; try_files $uri "/Applications/Herd.app/Contents/Resources/valet/server.php"; }
+  ```
+
+  Then `herd restart nginx`. Herd regenerates that file when the site is re-secured, so the edit may need repeating.
 - Automatic redirects react to entry saves. Statamic rewrites child URLs without saving each child, which is why a parent change also adds a `parent/*` wildcard rule.
 - Control panel screens use Statamic's own UI components. Every export of the CP's `@ui` package is registered globally as a `ui-<kebab-name>` Vue component, and the CP compiles a Blade view's output as an in-DOM template, so `<ui-card-panel>`, `<ui-table>` and friends work straight from Blade and the screens match the CP. Two things not to try instead: a `<style>` block in a CP view (the Vue app drops it) and Tailwind variants the CP bundle never compiled (`sm:grid-cols-2` and the like are absent, plain utilities are fine).
 - The config file is `config/seo.php`, not `config/vulpo-seo.php`. Statamic derives an addon's slug from the package name, and a custom `extra.statamic.slug` breaks core's settings lookup: settings are written to `resources/addons/{slug}.yaml` but read from `resources/addons/{package-name}.yaml`.

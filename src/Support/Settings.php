@@ -28,7 +28,21 @@ class Settings
      */
     public static function all(): array
     {
-        return self::$values ??= Addon::get(self::PACKAGE)?->settings()->all() ?? [];
+        if (self::$values !== null) {
+            return self::$values;
+        }
+
+        try {
+            return self::$values = Addon::get(self::PACKAGE)?->settings()->all() ?? [];
+        } catch (\Throwable $e) {
+            // Settings live wherever Statamic's addon settings repository puts
+            // them, which on an eloquent-driver site is a table that may not
+            // have been migrated yet. Missing SEO defaults must not take the
+            // front end down with them.
+            report($e);
+
+            return self::$values = [];
+        }
     }
 
     /**
