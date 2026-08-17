@@ -84,3 +84,15 @@ it('sits at the top of the injected SEO tab', function () {
     expect($firstSection['fields'][0]['handle'])->toBe('seo_preview');
     expect($firstSection['fields'][0]['field']['type'])->toBe('seo_preview');
 });
+
+it('waits for Statamic instead of giving up', function () {
+    // Addon scripts are emitted before the control panel's Vite modules, so
+    // window.Statamic does not exist when the script first runs. Bailing out
+    // there left the field rendering "Component seo_preview-fieldtype does not
+    // exist", which no PHP test can catch — hence this check on the source.
+    $script = file_get_contents(__DIR__.'/../resources/js/cp.js');
+
+    expect($script)
+        ->toContain('whenReady')
+        ->not->toContain('if (!Statamic || !Vue) return');
+});
