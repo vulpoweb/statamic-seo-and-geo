@@ -117,6 +117,7 @@ Settings and redirects belong in version control. The files in `storage` do not.
 - Redirects run inside the `web` middleware group, after the response. A URL that never reaches Laravel (a real file on disk, a route outside `web`) is not redirected.
 - A physical `public/robots.txt` is served by the web server and wins over this addon. Delete it to let the control panel manage robots.txt. On Laravel Herd the generated body is correct but nginx reports a 404 status for `/robots.txt`, because its `error_page` handler keeps the missing-file status; standard nginx/Apache front-controller configs return 200.
 - Automatic redirects react to entry saves. Statamic rewrites child URLs without saving each child, which is why a parent change also adds a `parent/*` wildcard rule.
+- Control panel views ship their own CSS, built on the CP's `--theme-color-*` variables. Tailwind classes used in an addon view are not in the control panel bundle, because it is compiled from Statamic's own source.
 - The config file is `config/seo.php`, not `config/vulpo-seo.php`. Statamic derives an addon's slug from the package name, and a custom `extra.statamic.slug` breaks core's settings lookup: settings are written to `resources/addons/{slug}.yaml` but read from `resources/addons/{package-name}.yaml`.
 - Geocoding uses OpenStreetMap Nominatim, whose usage policy requires a descriptive User-Agent; set `VULPO_SEO_GEOCODER_USER_AGENT` for production.
 
