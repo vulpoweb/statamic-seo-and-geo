@@ -70,7 +70,7 @@ class RedirectsController
 
         $directory = file_exists("{$published}/redirects.yaml")
             ? $published
-            : __DIR__.'/../../../resources/blueprints';
+            : __DIR__.'/../../../../resources/blueprints';
 
         return (new BlueprintRepository)->setDirectory($directory)->find('redirects');
     }
