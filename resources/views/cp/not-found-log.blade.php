@@ -1,78 +1,78 @@
+{{--
+    Built from the control panel's own UI components. See the note in
+    cp/ai-crawlers.blade.php for why.
+
+    The "add redirect" form posts normally: ui-input and ui-button pass their
+    attributes through to the real input and button elements, so name, value and
+    required all reach the browser's form handling.
+--}}
 @extends('statamic::layout')
 
 @section('title', $title)
 
 @section('content')
-    <header class="vs-header">
-        <div>
-            <h1 class="vs-title">{{ __('404 log') }}</h1>
-            <p class="vs-subtitle">{{ __('URLs that visitors requested but that do not exist. Turn the ones that matter into redirects.') }}</p>
-        </div>
+    <div class="max-w-page mx-auto">
+        <ui-header title="{{ __('404 log') }}" icon="globe-arrow">
+            @if ($rows->isNotEmpty())
+                <form method="POST" action="{{ cp_route('vulpo-seo.not-found.clear') }}">
+                    @csrf
+                    <ui-button type="submit" text="{{ __('Clear log') }}"></ui-button>
+                </form>
+            @endif
+        </ui-header>
 
-        @if ($rows->isNotEmpty())
-            <form method="POST" action="{{ cp_route('vulpo-seo.not-found.clear') }}">
-                @csrf
-                <button type="submit" class="vs-btn">{{ __('Clear log') }}</button>
-            </form>
+        @if (session('success'))
+            <ui-alert variant="success" text="{{ session('success') }}" class="mb-8"></ui-alert>
         @endif
-    </header>
 
-    @if (session('success'))
-        <div class="vs-notice">{{ session('success') }}</div>
-    @endif
-
-    @if ($rows->isEmpty())
-        <div class="vs-empty">{{ __('Nothing logged yet. Any 404 from now on shows up here.') }}</div>
-    @else
-        <div class="vs-panel">
-            <table class="vs-table">
-                <thead>
-                    <tr>
-                        <th>{{ __('URL') }}</th>
-                        <th>{{ __('Hits') }}</th>
-                        <th>{{ __('Last seen') }}</th>
-                        <th>{{ __('Referrer') }}</th>
-                        <th class="vs-end">{{ __('Redirect to') }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($rows as $row)
-                        <tr>
-                            <td class="vs-path">{{ $row['path'] }}</td>
-                            <td class="vs-num">{{ $row['hits'] }}</td>
-                            <td class="vs-nowrap vs-muted">{{ $row['last_seen'] }}</td>
-                            <td class="vs-truncate vs-muted">{{ $row['referer'] ?: '—' }}</td>
-                            <td>
-                                @if ($redirects->has($row['path']))
-                                    <div class="vs-form vs-muted">
-                                        {{ __('Redirects to') }}
-                                        <span class="vs-path">{{ $redirects->get($row['path'])->to }}</span>
-                                    </div>
-                                @else
-                                    <div class="vs-form">
-                                        <form method="POST" action="{{ cp_route('vulpo-seo.redirects.store') }}" class="vs-form">
-                                            @csrf
-                                            <input type="hidden" name="from" value="{{ $row['path'] }}">
-                                            <input type="text" name="to" required placeholder="/new-page" class="vs-input vs-input--path">
-                                            <select name="status" class="vs-input">
-                                                <option value="301">301</option>
-                                                <option value="302">302</option>
-                                                <option value="410">410</option>
-                                            </select>
-                                            <button type="submit" class="vs-btn vs-btn--primary">{{ __('Add') }}</button>
-                                        </form>
-                                        <form method="POST" action="{{ cp_route('vulpo-seo.not-found.destroy') }}">
-                                            @csrf
-                                            <input type="hidden" name="path" value="{{ $row['path'] }}">
-                                            <button type="submit" class="vs-btn">{{ __('Dismiss') }}</button>
-                                        </form>
-                                    </div>
-                                @endif
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-    @endif
+        @if ($rows->isEmpty())
+            <ui-card-panel heading="{{ __('404 log') }}" subheading="{{ __('URLs that visitors requested but that do not exist.') }}">
+                <ui-description text="{{ __('Nothing logged yet. Any 404 from now on shows up here.') }}"></ui-description>
+            </ui-card-panel>
+        @else
+            <ui-card-panel heading="{{ __('Missing URLs') }}" subheading="{{ __('Turn the ones that matter into redirects. Redirects are managed under SEO → Redirects.') }}">
+                <ui-table>
+                    <ui-table-columns>
+                        <ui-table-column>{{ __('URL') }}</ui-table-column>
+                        <ui-table-column>{{ __('Hits') }}</ui-table-column>
+                        <ui-table-column>{{ __('Last seen') }}</ui-table-column>
+                        <ui-table-column>{{ __('Referrer') }}</ui-table-column>
+                        <ui-table-column>{{ __('Redirect to') }}</ui-table-column>
+                    </ui-table-columns>
+                    <ui-table-rows>
+                        @foreach ($rows as $row)
+                            <ui-table-row>
+                                <ui-table-cell class="font-mono text-xs">{{ $row['path'] }}</ui-table-cell>
+                                <ui-table-cell class="tabular-nums">{{ $row['hits'] }}</ui-table-cell>
+                                <ui-table-cell class="whitespace-nowrap text-gray-500 tabular-nums">{{ $row['last_seen'] }}</ui-table-cell>
+                                <ui-table-cell class="text-gray-500 truncate">{{ $row['referer'] ?: '—' }}</ui-table-cell>
+                                <ui-table-cell>
+                                    @if ($redirects->has($row['path']))
+                                        <ui-badge
+                                            icon="arrow-right"
+                                            text="{{ $redirects->get($row['path'])->to }}"
+                                        ></ui-badge>
+                                    @else
+                                        <div class="flex items-center gap-2">
+                                            <form method="POST" action="{{ cp_route('vulpo-seo.redirects.store') }}" class="flex items-center gap-2">
+                                                @csrf
+                                                <input type="hidden" name="from" value="{{ $row['path'] }}">
+                                                <ui-input name="to" required placeholder="/new-page" size="sm" class="w-48"></ui-input>
+                                                <ui-button type="submit" variant="primary" size="sm" text="{{ __('Add') }}"></ui-button>
+                                            </form>
+                                            <form method="POST" action="{{ cp_route('vulpo-seo.not-found.destroy') }}">
+                                                @csrf
+                                                <input type="hidden" name="path" value="{{ $row['path'] }}">
+                                                <ui-button type="submit" variant="ghost" size="sm" text="{{ __('Dismiss') }}"></ui-button>
+                                            </form>
+                                        </div>
+                                    @endif
+                                </ui-table-cell>
+                            </ui-table-row>
+                        @endforeach
+                    </ui-table-rows>
+                </ui-table>
+            </ui-card-panel>
+        @endif
+    </div>
 @endsection

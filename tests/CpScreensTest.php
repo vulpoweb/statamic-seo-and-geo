@@ -50,12 +50,14 @@ it('offers to create a redirect when the matching rule is inactive', function ()
     $this->get(cp_route('vulpo-seo.not-found.index'))
         ->assertOk()
         ->assertSee('/paused')
-        ->assertDontSee('Redirects to');
+        // The row keeps the "add redirect" form instead of showing a destination.
+        ->assertSee('name="to"', false)
+        ->assertDontSee('/elsewhere');
 });
 
 it('shows the destination when the matching rule is active', function () {
     app(NotFoundLog::class)->record('/moved');
     app(RedirectRepository::class)->add(new Redirect(from: '/moved', to: '/elsewhere'));
 
-    $this->get(cp_route('vulpo-seo.not-found.index'))->assertOk()->assertSee('Redirects to');
+    $this->get(cp_route('vulpo-seo.not-found.index'))->assertOk()->assertSee('/elsewhere');
 });

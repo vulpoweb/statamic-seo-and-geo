@@ -1,23 +1,42 @@
 <?php
 
-use Statamic\Statamic;
+/**
+ * The control panel screens are built from Statamic's own UI components, which
+ * the CP registers globally as `ui-<kebab-name>` and compiles from this Blade
+ * output as an in-DOM template. That is what keeps them looking native, so these
+ * tests guard against drifting back to hand-written styling.
+ */
+it('builds the screens from the control panel UI components', function (string $view) {
+    $blade = file_get_contents(__DIR__.'/../resources/views/cp/'.$view.'.blade.php');
 
-it('registers a control panel stylesheet', function () {
-    // The CP bundle has no CSS for utility classes used in addon views, and an
-    // inline <style> in the view does not survive the CP's Vue app, so the
-    // screens depend on this published stylesheet being linked in the CP head.
-    $styles = Statamic::availableStyles(request());
+    expect($blade)
+        ->toContain('<ui-header')
+        ->toContain('<ui-card-panel')
+        ->toContain('<ui-table')
+        ->toContain('<ui-button');
+})->with(['ai-crawlers', 'not-found-log']);
 
-    expect($styles)->toHaveKey('seo');
-    expect($styles['seo'][0])->toContain('cp.css');
-});
+it('does not style the screens itself', function (string $view) {
+    $blade = file_get_contents(__DIR__.'/../resources/views/cp/'.$view.'.blade.php');
 
-it('ships the stylesheet file it registers', function () {
-    expect(__DIR__.'/../resources/css/cp.css')->toBeFile();
-});
+    // An inline <style> does not survive the CP's Vue app, and a published
+    // stylesheet would mean maintaining a copy of the CP's design.
+    expect($blade)->not->toContain('<style');
+    expect(glob(__DIR__.'/../resources/css/*.css'))->toBeEmpty();
+})->with(['ai-crawlers', 'not-found-log']);
 
-it('does not inline styles into the control panel views', function () {
+it('only uses utility classes that exist in the control panel bundle', function () {
+    $classes = [];
+
     foreach (glob(__DIR__.'/../resources/views/cp/*.blade.php') as $view) {
-        expect(file_get_contents($view))->not->toContain('<style');
+        preg_match_all('/class="([^"{}]+)"/', file_get_contents($view), $matches);
+
+        foreach ($matches[1] as $attribute) {
+            $classes = array_merge($classes, preg_split('/\s+/', trim($attribute)));
+        }
     }
-});
+
+    // Responsive and arbitrary variants are the ones that bit us: the bundle is
+    // compiled from Statamic's source, so a variant it never uses is absent.
+    expect(array_filter(array_unique($classes), fn ($class) => str_contains($class, ':')))->toBeEmpty();
+})->skip(fn () => ! is_dir(__DIR__.'/../resources/views/cp'), 'No control panel views.');
