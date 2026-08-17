@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.5
+
+- The control panel screens are now built from Statamic's own UI components (`ui-header`, `ui-card-panel`, `ui-table`, `ui-badge`, `ui-button`, `ui-input`), so they match the control panel exactly instead of imitating it. No addon CSS ships any more.
+
 ## 1.0.4
 
 - The control panel stylesheet is now a published asset registered through `$stylesheets`, instead of a `<style>` block in the view. The control panel's Vue app drops inline style elements from a Blade view, which left both screens unstyled.
