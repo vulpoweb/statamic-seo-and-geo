@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.4
+
+- The control panel stylesheet is now a published asset registered through `$stylesheets`, instead of a `<style>` block in the view. The control panel's Vue app drops inline style elements from a Blade view, which left both screens unstyled.
+
 ## 1.0.3
 
 - Control panel screens now carry their own CSS instead of Tailwind utility classes, which the control panel bundle does not contain for addon views. The crawler totals sit in a compact row of cards and both tables are denser.

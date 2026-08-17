@@ -3,12 +3,10 @@
 @section('title', $title)
 
 @section('content')
-    @include('vulpo-seo::cp.partials.styles')
-
     <header class="vs-header">
         <div>
-            <h1>{{ __('AI crawlers') }}</h1>
-            <p>{{ __('Visits from AI assistants and their crawlers. Being readable is what gets a site quoted and recommended.') }}</p>
+            <h1 class="vs-title">{{ __('AI crawlers') }}</h1>
+            <p class="vs-subtitle">{{ __('Visits from AI assistants and their crawlers. Being readable is what gets a site quoted and recommended.') }}</p>
         </div>
 
         @if ($rows->isNotEmpty())

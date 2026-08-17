@@ -3,12 +3,10 @@
 @section('title', $title)
 
 @section('content')
-    @include('vulpo-seo::cp.partials.styles')
-
     <header class="vs-header">
         <div>
-            <h1>{{ __('404 log') }}</h1>
-            <p>{{ __('URLs that visitors requested but that do not exist. Turn the ones that matter into redirects.') }}</p>
+            <h1 class="vs-title">{{ __('404 log') }}</h1>
+            <p class="vs-subtitle">{{ __('URLs that visitors requested but that do not exist. Turn the ones that matter into redirects.') }}</p>
         </div>
 
         @if ($rows->isNotEmpty())
