@@ -19,7 +19,8 @@ class NotFoundLogController
         return view('vulpo-seo::cp.not-found-log', [
             'title' => __('404 log'),
             'rows' => $this->log->all(),
-            'redirects' => $this->redirects->all()->keyBy->from,
+            // Only active rules count: an inactive one is why the URL 404s.
+            'redirects' => $this->redirects->all()->filter->active->keyBy->from,
         ]);
     }
 

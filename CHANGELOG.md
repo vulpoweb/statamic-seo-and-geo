@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.3
+
+- Control panel screens now carry their own CSS instead of Tailwind utility classes, which the control panel bundle does not contain for addon views. The crawler totals sit in a compact row of cards and both tables are denser.
+- The 404 log only reports a destination for active redirects; an inactive rule shows the "add redirect" form, since an inactive rule is why the URL 404s.
+
 ## 1.0.2
 
 - Fixed the redirects screen failing to render when installed from vendor (blueprint path resolved one directory too high)
