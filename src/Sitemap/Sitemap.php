@@ -9,6 +9,7 @@ use Statamic\Facades\Entry;
 use Statamic\Facades\Site;
 use Statamic\Facades\Taxonomy;
 use Statamic\Facades\Term;
+use Vulpo\Seo\Support\Router;
 use Vulpo\Seo\Support\Settings;
 use Vulpo\Seo\Support\ValueReader;
 
@@ -17,7 +18,7 @@ use Vulpo\Seo\Support\ValueReader;
  *
  * Everything published and routable is included, minus the collections and
  * taxonomies excluded in the control panel, minus pages marked "hide from
- * sitemap" or "noindex".
+ * sitemap" or "noindex", minus entries that only redirect somewhere else.
  */
 class Sitemap
 {
@@ -38,7 +39,33 @@ class Sitemap
     }
 
     /**
-     * @return array<int, array{loc: string, lastmod: string|null, changefreq: string|null, priority: string|null}>
+     * The URLs for one page of the sitemap. Page 1 is the whole thing unless
+     * there are more than chunkSize() URLs.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function page(int $page): array
+    {
+        return array_slice($this->urls(), ($page - 1) * $this->chunkSize(), $this->chunkSize());
+    }
+
+    /**
+     * How many sitemap files the URLs need. More than one means /sitemap.xml
+     * serves an index pointing at them, rather than dropping the overflow.
+     */
+    public function pages(): int
+    {
+        return max(1, (int) ceil(count($this->urls()) / $this->chunkSize()));
+    }
+
+    public function chunkSize(): int
+    {
+        // Google's own limit is 50.000 URLs or 50MB per file.
+        return max(1, min((int) config('seo.sitemap.max_urls', 5000), 50000));
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
      */
     public function urls(): array
     {
@@ -72,7 +99,7 @@ class Sitemap
 
         usort($urls, fn (array $a, array $b) => strcmp($a['loc'], $b['loc']));
 
-        return array_slice($urls, 0, (int) config('seo.sitemap.max_urls', 5000));
+        return $urls;
     }
 
     /**
@@ -140,7 +167,7 @@ class Sitemap
      */
     private function url(Augmentable $data): ?array
     {
-        if (! method_exists($data, 'absoluteUrl') || ! $loc = $data->absoluteUrl()) {
+        if (! method_exists($data, 'absoluteUrl') || Router::isNotAPage($data) || ! $loc = $data->absoluteUrl()) {
             return null;
         }
 
@@ -159,6 +186,42 @@ class Sitemap
                 ?: Settings::string('sitemap_changefreq'),
             'priority' => $values->string('sitemap_priority')
                 ?: Settings::string('sitemap_priority'),
+            'alternates' => $this->alternates($data),
         ];
+    }
+
+    /**
+     * The same page in the site's other locales, which is what search engines
+     * read to serve the right language. Only emitted when there is more than one
+     * published localisation to point at.
+     *
+     * @return array<int, array{hreflang: string, href: string}>
+     */
+    private function alternates(Augmentable $data): array
+    {
+        if (Site::all()->count() < 2 || ! Settings::bool('hreflang', true) || ! method_exists($data, 'in')) {
+            return [];
+        }
+
+        $alternates = [];
+
+        foreach (Site::all() as $site) {
+            $localized = $data->in($site->handle());
+
+            if (! $localized || ! $localized->absoluteUrl()) {
+                continue;
+            }
+
+            if (method_exists($localized, 'published') && ! $localized->published()) {
+                continue;
+            }
+
+            $alternates[] = [
+                'hreflang' => $site->shortLocale(),
+                'href' => $localized->absoluteUrl(),
+            ];
+        }
+
+        return count($alternates) > 1 ? $alternates : [];
     }
 }

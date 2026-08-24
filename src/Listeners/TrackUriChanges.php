@@ -54,6 +54,7 @@ class TrackUriChanges
             to: $newUri,
             source: Redirect::SOURCE_AUTO,
             created_at: now()->toDateTimeString(),
+            site: $site,
         ));
 
         if ($this->hasChildren($entry)) {
@@ -63,6 +64,7 @@ class TrackUriChanges
                 match: Redirect::MATCH_WILDCARD,
                 source: Redirect::SOURCE_AUTO,
                 created_at: now()->toDateTimeString(),
+                site: $site,
             ));
         }
     }

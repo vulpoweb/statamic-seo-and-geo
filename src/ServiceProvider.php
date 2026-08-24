@@ -10,10 +10,13 @@ use Statamic\Events\EntrySaved;
 use Statamic\Events\TermBlueprintFound;
 use Statamic\Events\TermDeleted;
 use Statamic\Events\TermSaved;
+use Statamic\Facades\Addon;
 use Statamic\Facades\CP\Nav;
 use Statamic\Facades\Permission;
 use Statamic\Providers\AddonServiceProvider;
 use Vulpo\Seo\AiCrawlers\CrawlerLog;
+use Vulpo\Seo\Console\ExportToFilesCommand;
+use Vulpo\Seo\Console\ImportRedirectsCommand;
 use Vulpo\Seo\Console\ImportToDatabaseCommand;
 use Vulpo\Seo\Console\IndexUrisCommand;
 use Vulpo\Seo\Console\MigrateCommand;
@@ -27,6 +30,7 @@ use Vulpo\Seo\Redirects\NotFoundLog;
 use Vulpo\Seo\Redirects\RedirectRepository;
 use Vulpo\Seo\Redirects\UriLedger;
 use Vulpo\Seo\Storage\StorageManager;
+use Vulpo\Seo\Support\Settings;
 use Vulpo\Seo\Tags\SeoTags;
 use Vulpo\Seo\Widgets\AiCrawlersWidget;
 use Vulpo\Seo\Widgets\NotFoundWidget;
@@ -58,7 +62,9 @@ class ServiceProvider extends AddonServiceProvider
     protected $commands = [
         MigrateCommand::class,
         IndexUrisCommand::class,
+        ImportRedirectsCommand::class,
         ImportToDatabaseCommand::class,
+        ExportToFilesCommand::class,
     ];
 
     protected $routes = [
@@ -104,6 +110,14 @@ class ServiceProvider extends AddonServiceProvider
 
     public function bootAddon(): void
     {
+        // Strings go through __(), so a project can translate the whole addon by
+        // dropping its own {locale}.json next to these.
+        $this->loadJsonTranslationsFrom(__DIR__.'/../lang');
+
+        $this->publishes([
+            __DIR__.'/../lang' => lang_path('vendor/vulpo-seo'),
+        ], 'vulpo-seo-translations');
+
         $this->publishes([
             __DIR__.'/../resources/blueprints' => resource_path('blueprints/vendor/vulpo-seo'),
         ], 'vulpo-seo-blueprints');
@@ -149,12 +163,25 @@ class ServiceProvider extends AddonServiceProvider
     private function registerPermissions(): void
     {
         Permission::register('view vulpo seo')
-            ->label(__('View & edit SEO settings, redirects and logs'));
+            ->label(__('View SEO settings, redirects and logs'))
+            ->children([
+                Permission::make('edit vulpo seo')
+                    ->label(__('Edit redirects and clear logs')),
+            ]);
     }
 
     private function registerNav(): void
     {
         Nav::extend(function ($nav) {
+            // Core lists every addon's settings under Tools → Addons. This addon
+            // has its own top-level entry pointing at the same screen, so drop
+            // core's to stop offering it twice. Anyone who can only edit this
+            // addon's settings gets core's entry in Tools directly, hence both.
+            if ($addon = Addon::get(Settings::PACKAGE)) {
+                $nav->remove('Tools', 'Addons', $addon->name());
+                $nav->remove('Tools', $addon->name());
+            }
+
             $nav->create(__('SEO'))
                 ->section('Tools')
                 ->can('view vulpo seo')

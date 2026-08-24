@@ -24,6 +24,9 @@ class Redirect
 
     public const SOURCE_AUTO = 'auto';
 
+    /**
+     * @param  string|null  $site  A site handle, or null to apply to every site.
+     */
     public function __construct(
         public readonly string $from,
         public readonly string $to,
@@ -32,6 +35,7 @@ class Redirect
         public readonly bool $active = true,
         public readonly string $source = self::SOURCE_MANUAL,
         public readonly ?string $created_at = null,
+        public readonly ?string $site = null,
     ) {}
 
     /**
@@ -49,6 +53,7 @@ class Redirect
             active: filter_var($row['active'] ?? true, FILTER_VALIDATE_BOOL),
             source: (string) ($row['source'] ?? self::SOURCE_MANUAL),
             created_at: isset($row['created_at']) ? (string) $row['created_at'] : null,
+            site: self::normalizeSite($row['site'] ?? null),
         );
     }
 
@@ -65,6 +70,7 @@ class Redirect
             'active' => $this->active,
             'source' => $this->source,
             'created_at' => $this->created_at,
+            'site' => $this->site,
         ];
     }
 
@@ -75,10 +81,13 @@ class Redirect
 
     /**
      * The destination for the given path, or null when the rule does not match.
+     *
+     * A rule with no site applies everywhere, which is what a single-site
+     * install always gets.
      */
-    public function destinationFor(string $path): ?string
+    public function destinationFor(string $path, ?string $site = null): ?string
     {
-        if (! $this->active || ! $this->isValid()) {
+        if (! $this->active || ! $this->isValid() || ! $this->appliesTo($site)) {
             return null;
         }
 
@@ -124,6 +133,34 @@ class Redirect
     }
 
     /**
+     * Legacy URLs are often query strings — /index.php?id=42 — so a rule may
+     * carry one, and then it is matched against path plus query.
+     */
+    public function matchesQueryString(): bool
+    {
+        return $this->match !== self::MATCH_REGEX && str_contains($this->from, '?');
+    }
+
+    public function appliesTo(?string $site): bool
+    {
+        return $this->site === null || $site === null || $this->site === $site;
+    }
+
+    /**
+     * The sites fieldtype hands over an array even when it is limited to one.
+     */
+    private static function normalizeSite(mixed $site): ?string
+    {
+        if (is_array($site)) {
+            $site = $site[0] ?? null;
+        }
+
+        $site = is_string($site) ? trim($site) : null;
+
+        return ($site === '' || $site === '*') ? null : $site;
+    }
+
+    /**
      * Paths are stored with a leading slash and no trailing slash. Regexes are
      * left exactly as the user typed them.
      */
@@ -135,6 +172,11 @@ class Redirect
             return $path;
         }
 
-        return '/'.trim($path, '/');
+        // Keep any query string, but normalise the path in front of it.
+        [$path, $query] = array_pad(explode('?', $path, 2), 2, null);
+
+        $path = '/'.trim($path, '/');
+
+        return $query === null || $query === '' ? $path : $path.'?'.$query;
     }
 }

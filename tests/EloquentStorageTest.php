@@ -41,7 +41,7 @@ it('keeps redirects in the database', function () {
 
     expect(app('db')->table('vulpo_seo_redirects')->count())->toBe(1);
     expect(app('db')->table('vulpo_seo_redirects')->first()->from_path)->toBe('/old');
-    expect($repository->resolve('/old'))->toBe(['to' => '/new', 'status' => 301]);
+    expect($repository->resolve('/old'))->toBe(['to' => '/new', 'status' => 301, 'consumed_query' => false]);
 
     $repository->remove('/old');
 
@@ -214,4 +214,22 @@ it('imports the URL index written in the old map format', function () {
 
     expect(app('db')->table('vulpo_seo_uris')->count())->toBe(2);
     expect(app(UriLedger::class)->get('abc', 'default'))->toBe('/about');
+});
+
+it('exports database rows back to flat files', function () {
+    app(RedirectRepository::class)->add(new Redirect(from: '/old', to: '/new'));
+    app(NotFoundLog::class)->record('/missing');
+
+    $this->artisan('vulpo:seo:export-to-files')->assertSuccessful();
+
+    expect(base_path((string) config('seo.redirects.path')))->toBeFile();
+    expect(file_get_contents(base_path((string) config('seo.redirects.path'))))->toContain('/old');
+    expect(file_get_contents(storage_path('app/'.config('seo.redirects.not_found_log_path'))))->toContain('/missing');
+});
+
+it('refuses to export while the site is on flat files', function () {
+    config()->set('seo.storage.driver', 'file');
+    app(StorageManager::class)->flush();
+
+    $this->artisan('vulpo:seo:export-to-files')->assertFailed();
 });

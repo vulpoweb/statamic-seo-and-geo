@@ -115,3 +115,67 @@ it('accepts a pasted verification meta tag', function () {
 it('outputs no verification tags when none are set', function () {
     expect(meta()->render())->not->toContain('site-verification');
 });
+
+it('outputs article properties alongside og:type article', function () {
+    Settings::swap(['append_site_name' => false]);
+
+    $html = meta([
+        'title' => 'A post',
+        'seo_schema_type' => 'article',
+        'seo_schema_article_published' => '2026-03-04',
+        'seo_schema_article_author' => 'Jane Doe',
+    ])->render();
+
+    expect($html)
+        ->toContain('<meta property="og:type" content="article">')
+        ->toContain('<meta property="article:published_time" content="2026-03-04T00:00:00+00:00">')
+        ->toContain('<meta property="article:author" content="Jane Doe">');
+});
+
+it('leaves article properties out for a normal page', function () {
+    expect(meta(['title' => 'A page'])->render())->not->toContain('article:');
+});
+
+it('outputs a twitter creator handle when set', function () {
+    Settings::swap(['twitter_handle' => 'vulpo', 'twitter_creator' => '@janedoe']);
+
+    expect(meta()->render())
+        ->toContain('<meta name="twitter:site" content="@vulpo">')
+        ->toContain('<meta name="twitter:creator" content="@janedoe">');
+});
+
+it('keeps the pagination parameter in the canonical, and drops everything else', function () {
+    Settings::swap([]);
+
+    $meta = new Meta(ValueReader::empty());
+
+    $this->get('/blog?page=3&utm_source=newsletter');
+
+    expect($meta->canonical())->toBe(url('/blog').'?page=3');
+});
+
+it('leaves page one canonicalising to the plain URL', function () {
+    Settings::swap([]);
+
+    $meta = new Meta(ValueReader::empty());
+
+    $this->get('/blog?page=1');
+
+    expect($meta->canonical())->toBe(url('/blog'));
+});
+
+it('applies the trailing slash preference', function () {
+    Settings::swap([]);
+
+    config()->set('seo.canonical.trailing_slash', true);
+
+    $this->get('/blog?page=2');
+
+    expect((new Meta(ValueReader::empty()))->canonical())->toBe(url('/blog').'/?page=2');
+
+    config()->set('seo.canonical.trailing_slash', false);
+
+    $this->get('/blog/');
+
+    expect((new Meta(ValueReader::empty()))->canonical())->toBe(url('/blog'));
+});

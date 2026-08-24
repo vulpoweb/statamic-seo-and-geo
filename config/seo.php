@@ -93,6 +93,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Canonical URLs
+    |--------------------------------------------------------------------------
+    |
+    | A page's canonical URL is its own address without the query string, so
+    | tracking parameters never split a page in two. Pagination is the exception:
+    | page 2 should point at itself, not at page 1, or its content looks like a
+    | duplicate of the first page and drops out of the index.
+    |
+    | "trailing_slash" can force a trailing slash on or off, so a site served
+    | both ways still advertises one address. Null leaves the URL as it is.
+    |
+    */
+
+    'canonical' => [
+        'pagination_query' => 'page',
+        'trailing_slash' => null,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | robots.txt
     |--------------------------------------------------------------------------
     |
@@ -105,6 +125,7 @@ return [
     'robots' => [
         'enabled' => true,
         'route' => 'robots.txt',
+        'cache_minutes' => 60,
     ],
 
     /*

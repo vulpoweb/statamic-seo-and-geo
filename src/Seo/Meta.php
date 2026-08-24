@@ -2,6 +2,7 @@
 
 namespace Vulpo\Seo\Seo;
 
+use Illuminate\Support\Carbon;
 use Statamic\Contracts\Entries\Entry as EntryContract;
 use Statamic\Facades\Entry;
 use Statamic\Facades\Site;
@@ -54,7 +55,82 @@ class Meta
 
     public function canonical(): string
     {
-        return $this->values->string('canonical') ?: request()->url();
+        return $this->normalizeCanonical(
+            $this->values->string('canonical') ?: $this->currentUrl(),
+        );
+    }
+
+    /**
+     * The current URL without its query string, except for the pagination
+     * parameter: page 2 has to point at itself or it reads as a duplicate of
+     * page 1 and falls out of the index.
+     */
+    private function currentUrl(): string
+    {
+        $url = request()->url();
+        $parameter = (string) config('seo.canonical.pagination_query', 'page');
+
+        if ($parameter === '') {
+            return $url;
+        }
+
+        $page = request()->query($parameter);
+
+        return is_scalar($page) && (string) $page !== '' && (string) $page !== '1'
+            ? $url.'?'.$parameter.'='.rawurlencode((string) $page)
+            : $url;
+    }
+
+    /**
+     * Applies the project's trailing slash preference, so a site reachable both
+     * with and without one still advertises a single address.
+     */
+    private function normalizeCanonical(string $url): string
+    {
+        $preference = config('seo.canonical.trailing_slash');
+
+        if ($preference === null) {
+            return $url;
+        }
+
+        $parts = parse_url($url);
+        $path = $parts['path'] ?? '/';
+
+        // The site root is always just "/", and a URL ending in a filename
+        // (sitemap.xml, feed.atom) never takes a slash.
+        if ($path === '' || $path === '/' || str_contains(basename($path), '.')) {
+            return $url;
+        }
+
+        $parts['path'] = $preference ? rtrim($path, '/').'/' : rtrim($path, '/');
+
+        return $this->buildUrl($parts);
+    }
+
+    /**
+     * @param  array<string, string|int>  $parts  the output of parse_url()
+     */
+    private function buildUrl(array $parts): string
+    {
+        $url = ($parts['scheme'] ?? 'https').'://';
+
+        if (isset($parts['user'])) {
+            $url .= $parts['user'].(isset($parts['pass']) ? ':'.$parts['pass'] : '').'@';
+        }
+
+        $url .= $parts['host'] ?? '';
+
+        if (isset($parts['port'])) {
+            $url .= ':'.$parts['port'];
+        }
+
+        $url .= $parts['path'] ?? '';
+
+        if (isset($parts['query'])) {
+            $url .= '?'.$parts['query'];
+        }
+
+        return $url.(isset($parts['fragment']) ? '#'.$parts['fragment'] : '');
     }
 
     public function robots(): string
@@ -133,6 +209,8 @@ class Meta
             $tags[] = $this->meta('property', 'og:description', $description);
         }
 
+        $tags = array_merge($tags, $this->articleTags());
+
         if ($image = $this->imageUrl()) {
             $tags[] = $this->meta('property', 'og:image', $image);
 
@@ -150,6 +228,55 @@ class Meta
         }
 
         return $tags;
+    }
+
+    /**
+     * Open Graph's article properties. Emitting og:type=article without them is
+     * half a declaration, and it is what social platforms read for bylines and
+     * freshness.
+     *
+     * @return array<int, string>
+     */
+    private function articleTags(): array
+    {
+        if ($this->openGraphType() !== 'article') {
+            return [];
+        }
+
+        $tags = [];
+
+        if ($published = $this->articleDate()) {
+            $tags[] = $this->meta('property', 'article:published_time', $published);
+        }
+
+        if ($modified = $this->entry?->lastModified()?->toAtomString()) {
+            $tags[] = $this->meta('property', 'article:modified_time', $modified);
+        }
+
+        if ($author = $this->values->string('article_author')) {
+            $tags[] = $this->meta('property', 'article:author', $author);
+        }
+
+        return $tags;
+    }
+
+    /**
+     * The date entered on the Structured data tab, otherwise the entry's own
+     * date for a dated collection.
+     */
+    private function articleDate(): ?string
+    {
+        if ($date = $this->values->string('article_published')) {
+            try {
+                return Carbon::parse($date)->toAtomString();
+            } catch (\Throwable) {
+                return null;
+            }
+        }
+
+        return $this->entry && method_exists($this->entry, 'date') && $this->entry->hasDate()
+            ? $this->entry->date()?->toAtomString()
+            : null;
     }
 
     /**
@@ -178,6 +305,10 @@ class Meta
 
         if ($handle = Settings::string('twitter_handle')) {
             $tags[] = $this->meta('name', 'twitter:site', '@'.ltrim($handle, '@'));
+        }
+
+        if ($creator = Settings::string('twitter_creator')) {
+            $tags[] = $this->meta('name', 'twitter:creator', '@'.ltrim($creator, '@'));
         }
 
         return $tags;

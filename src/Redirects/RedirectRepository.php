@@ -62,7 +62,7 @@ class RedirectRepository
         }
 
         $redirects = $this->all()
-            ->reject(fn (Redirect $existing) => strcasecmp($existing->from, $redirect->from) === 0)
+            ->reject(fn (Redirect $existing) => $this->isSameRule($existing, $redirect->from, $redirect->site))
             ->push($redirect)
             ->values();
 
@@ -71,32 +71,46 @@ class RedirectRepository
         return true;
     }
 
-    public function remove(string $from): void
+    public function remove(string $from, ?string $site = null): void
     {
         $this->write($this->all()
-            ->reject(fn (Redirect $redirect) => strcasecmp($redirect->from, $from) === 0)
+            ->reject(fn (Redirect $redirect) => $this->isSameRule($redirect, $from, $site))
             ->values());
     }
 
-    public function has(string $from): bool
+    public function has(string $from, ?string $site = null): bool
     {
-        return $this->all()->contains(fn (Redirect $redirect) => strcasecmp($redirect->from, $from) === 0);
+        return $this->all()->contains(
+            fn (Redirect $redirect) => strcasecmp($redirect->from, $from) === 0 && $redirect->appliesTo($site),
+        );
+    }
+
+    /**
+     * Two rules are the same when they cover the same path on the same site, so
+     * a French rule never overwrites the Dutch one for the same URL.
+     */
+    private function isSameRule(Redirect $redirect, string $from, ?string $site): bool
+    {
+        return strcasecmp($redirect->from, $from) === 0 && $redirect->site === $site;
     }
 
     /**
      * Resolve the destination for a path, following at most a few hops so a
      * misconfigured chain can never loop forever.
      *
-     * @return array{to: string, status: int}|null
+     * `consumed_query` tells the caller the matching rule matched on the query
+     * string, so it must not be appended to the destination again.
+     *
+     * @return array{to: string, status: int, consumed_query: bool}|null
      */
-    public function resolve(string $path): ?array
+    public function resolve(string $path, ?string $site = null, ?string $query = null): ?array
     {
         $current = Redirect::normalize($path);
         $visited = [$current];
         $result = null;
 
         for ($hop = 0; $hop < 5; $hop++) {
-            if (! $hit = $this->firstMatch($current)) {
+            if (! $hit = $this->firstMatch($current, $site, $query)) {
                 break;
             }
 
@@ -110,21 +124,36 @@ class RedirectRepository
 
             $visited[] = $next;
             $current = $next;
+            // Only the requested URL has a query string; a hop within the site does not.
+            $query = null;
         }
 
         return $result;
     }
 
     /**
-     * @return array{to: string, status: int}|null
+     * @return array{to: string, status: int, consumed_query: bool}|null
      */
-    private function firstMatch(string $path): ?array
+    private function firstMatch(string $path, ?string $site = null, ?string $query = null): ?array
     {
-        foreach ($this->all() as $redirect) {
-            $destination = $redirect->destinationFor($path);
+        $withQuery = $query ? $path.'?'.$query : null;
 
-            if ($destination !== null && $destination !== $path) {
-                return ['to' => $destination, 'status' => $redirect->status];
+        foreach ($this->all() as $redirect) {
+            // A rule carrying a query string only matches the full request URL.
+            $subject = $redirect->matchesQueryString() ? $withQuery : $path;
+
+            if ($subject === null) {
+                continue;
+            }
+
+            $destination = $redirect->destinationFor($subject, $site);
+
+            if ($destination !== null && $destination !== $subject) {
+                return [
+                    'to' => $destination,
+                    'status' => $redirect->status,
+                    'consumed_query' => $redirect->matchesQueryString(),
+                ];
             }
         }
 

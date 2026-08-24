@@ -52,6 +52,7 @@ class RedirectsController
             'from' => ['required', 'string'],
             'to' => ['required', 'string'],
             'status' => ['nullable', 'in:301,302,410'],
+            'site' => ['nullable', 'string'],
         ]);
 
         $this->redirects->add(new Redirect(
@@ -59,6 +60,7 @@ class RedirectsController
             to: trim($data['to']),
             status: (int) ($data['status'] ?? 301),
             created_at: now()->toDateTimeString(),
+            site: ($data['site'] ?? '') !== '' ? $data['site'] : null,
         ));
 
         return back()->with('success', __('Redirect created'));

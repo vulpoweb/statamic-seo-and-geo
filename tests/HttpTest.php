@@ -63,3 +63,9 @@ it('logs AI crawler visits', function () {
 
     expect(app(CrawlerLog::class)->totals())->toHaveKey('Claude');
 });
+
+it('redirects a legacy query string URL', function () {
+    app(RedirectRepository::class)->add(new Redirect(from: '/index.php?id=42', to: '/new-page'));
+
+    $this->get('/index.php?id=42')->assertRedirect('/new-page');
+});

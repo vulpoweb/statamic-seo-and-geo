@@ -3,6 +3,7 @@
 namespace Vulpo\Seo\Http\Controllers\CP;
 
 use Illuminate\View\View;
+use Statamic\Facades\User;
 use Vulpo\Seo\AiCrawlers\CrawlerLog;
 
 class AiCrawlersController
@@ -15,6 +16,7 @@ class AiCrawlersController
             'title' => __('AI crawlers'),
             'totals' => $this->log->totals(),
             'rows' => $this->log->all(),
+            'canEdit' => (bool) User::current()?->can('edit vulpo seo'),
         ]);
     }
 

@@ -25,10 +25,10 @@ it('does not style the screens itself', function (string $view) {
     expect(glob(__DIR__.'/../resources/css/*.css'))->toBeEmpty();
 })->with(['ai-crawlers', 'not-found-log']);
 
-it('only uses utility classes that exist in the control panel bundle', function () {
+it('avoids utility variants the control panel bundle does not compile', function () {
     $classes = [];
 
-    foreach (glob(__DIR__.'/../resources/views/cp/*.blade.php') as $view) {
+    foreach (glob(__DIR__.'/../resources/views/cp/**/*.blade.php') + glob(__DIR__.'/../resources/views/cp/*.blade.php') as $view) {
         preg_match_all('/class="([^"{}]+)"/', file_get_contents($view), $matches);
 
         foreach ($matches[1] as $attribute) {
@@ -36,7 +36,15 @@ it('only uses utility classes that exist in the control panel bundle', function 
         }
     }
 
-    // Responsive and arbitrary variants are the ones that bit us: the bundle is
-    // compiled from Statamic's source, so a variant it never uses is absent.
-    expect(array_filter(array_unique($classes), fn ($class) => str_contains($class, ':')))->toBeEmpty();
+    // Plain utilities and dark: variants are in the bundle, because Statamic's
+    // own components use them. Responsive breakpoints are the ones that are
+    // missing, which is what left the crawler totals stacked full width.
+    $breakpoints = ['sm:', 'md:', 'lg:', 'xl:', '2xl:'];
+
+    $offenders = array_filter(
+        array_unique($classes),
+        fn (string $class) => (bool) array_filter($breakpoints, fn ($prefix) => str_starts_with($class, $prefix)),
+    );
+
+    expect($offenders)->toBeEmpty();
 })->skip(fn () => ! is_dir(__DIR__.'/../resources/views/cp'), 'No control panel views.');

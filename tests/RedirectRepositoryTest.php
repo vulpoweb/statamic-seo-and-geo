@@ -13,7 +13,7 @@ it('stores and reads redirects', function () {
 
     expect($this->repository->has('/old'))->toBeTrue();
     expect($this->repository->all())->toHaveCount(1);
-    expect($this->repository->resolve('/old'))->toBe(['to' => '/new', 'status' => 301]);
+    expect($this->repository->resolve('/old'))->toBe(['to' => '/new', 'status' => 301, 'consumed_query' => false]);
 });
 
 it('replaces an existing rule for the same source', function () {
@@ -54,4 +54,31 @@ it('removes redirects', function () {
 
     expect($this->repository->all())->toBeEmpty();
     expect($this->repository->resolve('/old'))->toBeNull();
+});
+
+it('matches a legacy query string URL', function () {
+    $this->repository->save([
+        ['from' => '/index.php?id=42', 'to' => '/about'],
+        ['from' => '/index.php', 'to' => '/home'],
+    ]);
+    $this->repository->flush();
+
+    // The query string rule wins for the full URL...
+    expect($this->repository->resolve('/index.php', null, 'id=42')['to'])->toBe('/about');
+    // ...and the plain rule still handles the bare path.
+    expect($this->repository->resolve('/index.php')['to'])->toBe('/home');
+});
+
+it('ignores a query string rule when the request has no query', function () {
+    $this->repository->save([['from' => '/index.php?id=42', 'to' => '/about']]);
+    $this->repository->flush();
+
+    expect($this->repository->resolve('/index.php'))->toBeNull();
+});
+
+it('leaves a plain rule matching regardless of the query string', function () {
+    $this->repository->save([['from' => '/old', 'to' => '/new']]);
+    $this->repository->flush();
+
+    expect($this->repository->resolve('/old', null, 'utm_source=newsletter')['to'])->toBe('/new');
 });

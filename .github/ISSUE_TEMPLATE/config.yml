@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security issue
+    url: https://github.com/vulpo-be/vulpo-seo/security/policy
+    about: Report vulnerabilities privately by email instead of opening an issue.

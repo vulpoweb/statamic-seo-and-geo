@@ -11,7 +11,7 @@
 @section('content')
     <div class="max-w-page mx-auto">
         <ui-header title="{{ __('AI crawlers') }}" icon="ai-search-spark">
-            @if ($rows->isNotEmpty())
+            @if ($rows->isNotEmpty() && $canEdit)
                 <form method="POST" action="{{ cp_route('vulpo-seo.ai-crawlers.clear') }}">
                     @csrf
                     <ui-button type="submit" text="{{ __('Clear log') }}"></ui-button>

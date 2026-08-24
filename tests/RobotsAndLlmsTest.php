@@ -1,8 +1,13 @@
 <?php
 
+use Statamic\Facades\Collection as CollectionFacade;
+use Statamic\Facades\Entry;
+use Statamic\Testing\Concerns\PreventsSavingStacheItemsToDisk;
 use Vulpo\Seo\Llms\LlmsTxt;
 use Vulpo\Seo\Robots\RobotsTxt;
 use Vulpo\Seo\Support\Settings;
+
+uses(PreventsSavingStacheItemsToDisk::class);
 
 it('serves a robots.txt with the sitemap and the control panel excluded', function () {
     Settings::swap([]);
@@ -69,4 +74,32 @@ it('builds an llms.txt from the settings', function () {
         ->toContain('We work in Belgium.')
         ->toContain('## Expertise')
         ->toContain('- Laravel');
+});
+
+it('leaves redirect entries out of the llms.txt', function () {
+    Settings::swap(['site_name' => 'Vulpo']);
+    CollectionFacade::make('pages')->routes('/{slug}')->sites(['default'])->save();
+
+    Entry::make()->collection('pages')->slug('about')->data(['title' => 'About'])->save();
+    Entry::make()->collection('pages')->slug('old')->data(['title' => 'Old', 'redirect' => 'https://vulpo.be/new'])->save();
+
+    LlmsTxt::flushCache();
+
+    $llms = LlmsTxt::forCurrentSite()->render();
+
+    expect($llms)->toContain('[About]');
+    expect($llms)->not->toContain('[Old]');
+    expect($llms)->not->toContain('vulpo.be/new');
+});
+
+it('sends cache headers on robots.txt and llms.txt', function () {
+    Settings::swap([]);
+
+    config()->set('seo.robots.cache_minutes', 30);
+    config()->set('seo.llms.cache_minutes', 30);
+
+    LlmsTxt::flushCache();
+
+    $this->get('/robots.txt')->assertHeader('Cache-Control', 'max-age=1800, public, stale-while-revalidate=1800');
+    $this->get('/llms.txt')->assertHeader('Cache-Control', 'max-age=1800, public, stale-while-revalidate=1800');
 });

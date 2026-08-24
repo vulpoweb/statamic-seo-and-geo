@@ -15,7 +15,7 @@ class NotFoundLog
     public function __construct(private readonly RowRepository $rows) {}
 
     /**
-     * @return Collection<int, array{path: string, hits: int, last_seen: string, referer: string|null}>
+     * @return Collection<int, array{path: string, site: string|null, hits: int, last_seen: string, referer: string|null}>
      */
     public function all(): Collection
     {
@@ -25,6 +25,7 @@ class NotFoundLog
             // rather than making every caller defensive.
             ->map(fn (array $row) => [
                 'path' => (string) $row['path'],
+                'site' => $row['site'] ?? null,
                 'hits' => (int) ($row['hits'] ?? 0),
                 'last_seen' => (string) ($row['last_seen'] ?? ''),
                 'referer' => $row['referer'] ?? null,
@@ -33,14 +34,14 @@ class NotFoundLog
             ->values();
     }
 
-    public function record(string $path, ?string $referer = null): void
+    public function record(string $path, ?string $referer = null, ?string $site = null): void
     {
         if (! config('seo.redirects.log_not_found', true)) {
             return;
         }
 
         $this->rows->bump(
-            keys: ['path' => Redirect::normalize($path)],
+            keys: ['path' => Redirect::normalize($path), 'site' => $site],
             counter: 'hits',
             // A later hit without a referer must not wipe the one we already have.
             values: array_filter([
@@ -52,9 +53,12 @@ class NotFoundLog
         $this->rows->keepNewest('last_seen', (int) config('seo.redirects.not_found_log_max', 500));
     }
 
-    public function forget(string $path): void
+    public function forget(string $path, ?string $site = null): void
     {
-        $this->rows->delete(['path' => Redirect::normalize($path)]);
+        $this->rows->delete(array_filter(
+            ['path' => Redirect::normalize($path), 'site' => $site],
+            fn ($value) => $value !== null,
+        ));
     }
 
     public function clear(): void

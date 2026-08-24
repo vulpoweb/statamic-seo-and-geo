@@ -72,7 +72,7 @@ it('never queries its tables on a flat file site', function () {
     app(CrawlerLog::class)->record('Claude', '/');
     app(UriLedger::class)->remember('123', 'default', '/about');
 
-    expect(app(RedirectRepository::class)->resolve('/old'))->toBe(['to' => '/new', 'status' => 301]);
+    expect(app(RedirectRepository::class)->resolve('/old'))->toBe(['to' => '/new', 'status' => 301, 'consumed_query' => false]);
     expect(collect($queries)->filter(fn (string $sql) => str_contains($sql, 'vulpo_seo')))->toBeEmpty();
 });
 

@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Cache;
 use Statamic\Facades\Collection as CollectionFacade;
 use Statamic\Facades\Entry;
 use Statamic\Facades\Site;
+use Vulpo\Seo\Support\Router;
 use Vulpo\Seo\Support\Settings;
 use Vulpo\Seo\Support\ValueReader;
 
@@ -114,7 +115,11 @@ class LlmsTxt
 
                 $values = ValueReader::fromData($entry);
 
-                if ($values->bool('noindex') || $values->bool('sitemap_exclude') || ! $url = $entry->absoluteUrl()) {
+                if ($values->bool('noindex') || $values->bool('sitemap_exclude') || Router::isNotAPage($entry)) {
+                    continue;
+                }
+
+                if (! $url = $entry->absoluteUrl()) {
                     continue;
                 }
 

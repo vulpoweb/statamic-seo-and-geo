@@ -10,13 +10,14 @@ use Statamic\Facades\Term;
 use Vulpo\Seo\Redirects\Redirect;
 use Vulpo\Seo\Redirects\RedirectRepository;
 use Vulpo\Seo\Support\Fields;
+use Vulpo\Seo\Support\SeoProImport;
 use Vulpo\Seo\Support\Settings;
 use Vulpo\Seo\Support\YamlFile;
 
 /**
- * Moves data written by the addons Vulpo SEO replaces (alt-design/alt-seo,
- * alt-design/alt-sitemap, alt-design/alt-redirects and vulpo/geo) onto this
- * addon's field handles and settings.
+ * Moves data written by the addons Vulpo SEO replaces (statamic/seo-pro,
+ * alt-design/alt-seo, alt-design/alt-sitemap, alt-design/alt-redirects and
+ * vulpo/geo) onto this addon's field handles and settings.
  */
 class MigrateCommand extends Command
 {
@@ -25,9 +26,18 @@ class MigrateCommand extends Command
     protected $signature = 'vulpo:seo:migrate
         {--dry-run : Show what would change without writing anything}';
 
-    protected $description = 'Migrate SEO data from alt-seo, alt-sitemap, alt-redirects and vulpo/geo';
+    protected $description = 'Migrate SEO data from seo-pro, alt-seo, alt-sitemap, alt-redirects and vulpo/geo';
 
     private bool $dryRun = false;
+
+    private SeoProImport $seoPro;
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        $this->seoPro = new SeoProImport;
+    }
 
     public function handle(RedirectRepository $redirects): int
     {
@@ -81,6 +91,14 @@ class MigrateCommand extends Command
         $data = $item->data()->all();
         $migrated = [];
 
+        foreach ($this->seoProFields($data) as $handle => $value) {
+            // Never overwrite a value that was already entered on the new field.
+            if (($data[$handle] ?? null) === null || $data[$handle] === '') {
+                $data[$handle] = $value;
+                $migrated[] = "seo.{$handle}";
+            }
+        }
+
         foreach ($renames as $legacy => $current) {
             if (! array_key_exists($legacy, $data)) {
                 continue;
@@ -100,6 +118,9 @@ class MigrateCommand extends Command
         if ($migrated === []) {
             return false;
         }
+
+        // The `seo` array stays put: SEO Pro may still be installed, and leaving
+        // it costs nothing while removing it cannot be undone.
 
         $this->line('  '.($item->id() ?? '?').': '.implode(', ', $migrated));
 
@@ -121,9 +142,30 @@ class MigrateCommand extends Command
             : $value;
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function seoProFields(array $data): array
+    {
+        $seo = $data['seo'] ?? null;
+
+        return is_array($seo) ? $this->seoPro->fields($seo) : [];
+    }
+
     private function migrateSettings(): void
     {
         $values = [];
+
+        foreach (SeoProImport::DEFAULTS_PATHS as $path) {
+            $file = YamlFile::inProject($path);
+
+            if ($file->exists()) {
+                $values = array_merge($values, $this->seoPro->settings($file->read()));
+
+                break;
+            }
+        }
 
         $geo = YamlFile::inProject('content/vulpo-geo/settings.yaml')->read();
 

@@ -104,3 +104,67 @@ it('can be switched off entirely', function () {
 
     expect(schema()->nodes())->toBeEmpty();
 });
+
+it('outputs a product node with an offer', function () {
+    $product = schema([
+        'title' => 'Widget',
+        'seo_schema_type' => 'product',
+        'seo_schema_product_brand' => 'Vulpo',
+        'seo_schema_product_sku' => 'W-1',
+        'seo_schema_product_price' => '49.95',
+        'seo_schema_product_availability' => 'OutOfStock',
+    ])->page();
+
+    expect($product['@type'])->toBe('Product');
+    expect($product['name'])->toBe('Widget');
+    expect($product['brand'])->toBe(['@type' => 'Brand', 'name' => 'Vulpo']);
+    expect($product['offers']['price'])->toBe('49.95');
+    expect($product['offers']['priceCurrency'])->toBe('EUR');
+    expect($product['offers']['availability'])->toBe('https://schema.org/OutOfStock');
+});
+
+it('leaves the offer out of a product without a price', function () {
+    $product = schema(['title' => 'Widget', 'seo_schema_type' => 'product'])->page();
+
+    expect($product)->not->toHaveKey('offers');
+});
+
+it('outputs an event node', function () {
+    $event = schema([
+        'title' => 'Laravel meetup',
+        'seo_schema_type' => 'event',
+        'seo_schema_event_start' => '2026-09-01 19:00',
+        'seo_schema_event_location' => 'Ghent',
+    ])->page();
+
+    expect($event['@type'])->toBe('Event');
+    expect($event['name'])->toBe('Laravel meetup');
+    expect($event['startDate'])->toBe('2026-09-01 19:00');
+    expect($event['location'])->toBe(['@type' => 'Place', 'name' => 'Ghent']);
+});
+
+it('outputs custom JSON-LD as its own node', function () {
+    $nodes = schema([
+        'seo_schema_custom' => '{"@type":"HowTo","name":"Change a tyre"}',
+    ])->nodes();
+
+    $custom = collect($nodes)->firstWhere('@type', 'HowTo');
+
+    expect($custom['name'])->toBe('Change a tyre');
+    // The boilerplate is added when the pasted snippet leaves it out.
+    expect($custom['@context'])->toBe('https://schema.org');
+});
+
+it('keeps a context the snippet already has', function () {
+    $custom = schema([
+        'seo_schema_custom' => '{"@context":"https://schema.org/","@type":"Recipe","name":"Stoofvlees"}',
+    ])->custom();
+
+    expect($custom['@context'])->toBe('https://schema.org/');
+});
+
+it('ignores invalid custom JSON instead of breaking the page', function () {
+    expect(schema(['seo_schema_custom' => '{not json'])->custom())->toBeNull();
+    expect(schema(['seo_schema_custom' => '"just a string"'])->custom())->toBeNull();
+    expect(schema(['seo_schema_custom' => '{}'])->custom())->toBeNull();
+});

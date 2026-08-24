@@ -84,6 +84,8 @@ tabs:
                 article: 'Article / blog post'
                 service: Service
                 person: 'Person / team member'
+                product: Product
+                event: Event
           -
             handle: seo_schema_faqs
             field:
@@ -190,3 +192,141 @@ tabs:
               instructions: 'e.g. "Founder", "Lead developer".'
               if:
                 seo_schema_type: 'equals person'
+          -
+            handle: seo_schema_product_name
+            field:
+              type: text
+              display: 'Product name'
+              width: 50
+              instructions: 'Defaults to the page title.'
+              if:
+                seo_schema_type: 'equals product'
+          -
+            handle: seo_schema_product_brand
+            field:
+              type: text
+              display: Brand
+              width: 50
+              if:
+                seo_schema_type: 'equals product'
+          -
+            handle: seo_schema_product_description
+            field:
+              type: textarea
+              display: 'Product description'
+              if:
+                seo_schema_type: 'equals product'
+          -
+            handle: seo_schema_product_image
+            field:
+              type: assets
+              display: 'Product image'
+              max_files: 1
+              instructions: 'Defaults to the sharing image on the SEO tab.'
+              if:
+                seo_schema_type: 'equals product'
+          -
+            handle: seo_schema_product_sku
+            field:
+              type: text
+              display: SKU
+              width: 33
+              if:
+                seo_schema_type: 'equals product'
+          -
+            handle: seo_schema_product_price
+            field:
+              type: text
+              display: Price
+              width: 33
+              instructions: 'Numbers only, e.g. "49.95".'
+              if:
+                seo_schema_type: 'equals product'
+          -
+            handle: seo_schema_product_currency
+            field:
+              type: text
+              display: Currency
+              width: 33
+              default: EUR
+              instructions: 'Three letters, e.g. EUR.'
+              if:
+                seo_schema_type: 'equals product'
+          -
+            handle: seo_schema_product_availability
+            field:
+              type: select
+              display: Availability
+              default: InStock
+              width: 50
+              options:
+                InStock: 'In stock'
+                OutOfStock: 'Out of stock'
+                PreOrder: 'Pre-order'
+                Discontinued: Discontinued
+              if:
+                seo_schema_type: 'equals product'
+          -
+            handle: seo_schema_event_name
+            field:
+              type: text
+              display: 'Event name'
+              width: 50
+              instructions: 'Defaults to the page title.'
+              if:
+                seo_schema_type: 'equals event'
+          -
+            handle: seo_schema_event_location
+            field:
+              type: text
+              display: Location
+              width: 50
+              instructions: 'Venue or city.'
+              if:
+                seo_schema_type: 'equals event'
+          -
+            handle: seo_schema_event_description
+            field:
+              type: textarea
+              display: 'Event description'
+              if:
+                seo_schema_type: 'equals event'
+          -
+            handle: seo_schema_event_start
+            field:
+              type: date
+              display: Starts
+              time_enabled: true
+              width: 50
+              if:
+                seo_schema_type: 'equals event'
+          -
+            handle: seo_schema_event_end
+            field:
+              type: date
+              display: Ends
+              time_enabled: true
+              width: 50
+              if:
+                seo_schema_type: 'equals event'
+          -
+            handle: seo_schema_event_url
+            field:
+              type: text
+              display: 'Tickets or info URL'
+              instructions: 'Defaults to this page.'
+              if:
+                seo_schema_type: 'equals event'
+      -
+        display: 'Custom structured data'
+        instructions: 'For anything the types above do not cover. Paste JSON-LD without the `<script>` tag; `@context` is added when missing. Invalid JSON is ignored rather than breaking the page.'
+        fields:
+          -
+            handle: seo_schema_custom
+            field:
+              type: code
+              display: 'Custom JSON-LD'
+              mode: json
+              mode_selectable: false
+              indent_size: 2
+              rulers: false

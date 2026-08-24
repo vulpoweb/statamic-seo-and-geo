@@ -58,6 +58,7 @@ class Schema
             Settings::bool('schema_website', true) ? $this->website() : null,
             Settings::bool('schema_breadcrumbs', true) ? $this->breadcrumbs() : null,
             $this->page(),
+            $this->custom(),
         ]));
     }
 
@@ -193,6 +194,8 @@ class Schema
             'article' => $this->article(),
             'service' => $this->service(),
             'person' => $this->person(),
+            'product' => $this->product(),
+            'event' => $this->event(),
             default => null,
         };
     }
@@ -283,6 +286,82 @@ class Schema
             'url' => $this->pageUrl(),
             'worksFor' => ['@id' => $this->base().'/#organization'],
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function product(): array
+    {
+        $price = $this->values->string('product_price');
+
+        return array_filter([
+            '@context' => 'https://schema.org',
+            '@type' => 'Product',
+            'name' => $this->values->string('product_name') ?: $this->pageTitle(),
+            'description' => $this->values->string('product_description'),
+            'sku' => $this->values->string('product_sku'),
+            'image' => Assets::url($this->values->field('product_image') ?: $this->values->field('image')),
+            'brand' => ($brand = $this->values->string('product_brand'))
+                ? ['@type' => 'Brand', 'name' => $brand]
+                : null,
+            'offers' => $price === null ? null : array_filter([
+                '@type' => 'Offer',
+                'price' => $price,
+                'priceCurrency' => $this->values->string('product_currency') ?: 'EUR',
+                'availability' => 'https://schema.org/'.($this->values->string('product_availability') ?: 'InStock'),
+                'url' => $this->pageUrl(),
+            ]),
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function event(): array
+    {
+        return array_filter([
+            '@context' => 'https://schema.org',
+            '@type' => 'Event',
+            'name' => $this->values->string('event_name') ?: $this->pageTitle(),
+            'description' => $this->values->string('event_description'),
+            'startDate' => $this->values->string('event_start'),
+            'endDate' => $this->values->string('event_end'),
+            'url' => $this->values->string('event_url') ?: $this->pageUrl(),
+            'image' => Assets::url($this->values->field('image')),
+            'location' => ($location = $this->values->string('event_location'))
+                ? ['@type' => 'Place', 'name' => $location]
+                : null,
+            'organizer' => ['@id' => $this->base().'/#organization'],
+        ]);
+    }
+
+    /**
+     * A raw JSON-LD escape hatch, for the types this addon does not model.
+     * Invalid JSON is skipped rather than breaking the page.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function custom(): ?array
+    {
+        if (! $json = $this->values->string('custom_schema')) {
+            return null;
+        }
+
+        try {
+            $decoded = json_decode($json, true, 32, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return null;
+        }
+
+        if (! is_array($decoded) || $decoded === []) {
+            return null;
+        }
+
+        // Allow a bare node without the boilerplate.
+        return array_key_exists('@context', $decoded)
+            ? $decoded
+            : array_merge(['@context' => 'https://schema.org'], $decoded);
     }
 
     /**

@@ -1,0 +1,22 @@
+name: Feature request
+description: Suggest something the addon should do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to achieve, and what stops you today?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you have in mind
+      description: A rough shape is fine. Mention any addon or spec that does this well.
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - label: This belongs in an SEO addon rather than in a site's own templates

@@ -54,3 +54,14 @@ it('leaves full URLs and regexes alone when normalising', function () {
     expect(Redirect::normalize('https://example.com/page'))->toBe('https://example.com/page');
     expect(Redirect::normalize('^/blog/(.*)$', Redirect::MATCH_REGEX))->toBe('^/blog/(.*)$');
 });
+
+it('keeps a query string when normalising', function () {
+    $redirect = Redirect::fromArray(['from' => 'index.php?id=42', 'to' => '/about']);
+
+    expect($redirect->from)->toBe('/index.php?id=42');
+    expect($redirect->matchesQueryString())->toBeTrue();
+});
+
+it('does not treat a plain path as a query string rule', function () {
+    expect(Redirect::fromArray(['from' => '/about', 'to' => '/'])->matchesQueryString())->toBeFalse();
+});

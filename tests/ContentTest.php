@@ -49,7 +49,7 @@ it('creates a redirect when a slug changes', function () {
     $this->entry->slug('about-us')->save();
 
     expect(app(RedirectRepository::class)->resolve('/about'))
-        ->toBe(['to' => '/about-us', 'status' => 301]);
+        ->toBe(['to' => '/about-us', 'status' => 301, 'consumed_query' => false]);
 });
 
 it('does not create a redirect when the setting is off', function () {

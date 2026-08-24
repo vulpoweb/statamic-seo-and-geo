@@ -56,6 +56,14 @@ tabs:
                       wildcard: 'Wildcard (*)'
                       regex: 'Regex'
                 -
+                  handle: site
+                  field:
+                    type: sites
+                    display: Site
+                    max_items: 1
+                    mode: select
+                    instructions: 'Leave empty to apply to every site.'
+                -
                   handle: active
                   field:
                     type: toggle

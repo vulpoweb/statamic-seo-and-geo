@@ -1,5 +1,5 @@
 {
-    "name": "vulpo/seo",
+    "name": "vulpo/seo-and-geo",
     "description": "All-in-one SEO toolkit for Statamic: meta tags, sitemap, redirects, structured data, robots.txt and llms.txt.",
     "type": "statamic-addon",
     "license": "MIT",
@@ -12,7 +12,7 @@
         "json-ld",
         "llms-txt"
     ],
-    "homepage": "https://github.com/vulpo-be/vulpo-seo",
+    "homepage": "https://github.com/vulpoweb/statamic-seo-and-geo",
     "authors": [
         {
             "name": "Vulpo",
@@ -21,8 +21,8 @@
         }
     ],
     "support": {
-        "issues": "https://github.com/vulpo-be/vulpo-seo/issues",
-        "source": "https://github.com/vulpo-be/vulpo-seo"
+        "issues": "https://github.com/vulpoweb/statamic-seo-and-geo/issues",
+        "source": "https://github.com/vulpoweb/statamic-seo-and-geo"
     },
     "require": {
         "php": "^8.3",
@@ -51,7 +51,7 @@
     },
     "extra": {
         "statamic": {
-            "name": "Vulpo SEO",
+            "name": "SEO & GEO",
             "description": "Meta tags, sitemap, redirects, structured data, robots.txt and llms.txt in one addon."
         },
         "laravel": {

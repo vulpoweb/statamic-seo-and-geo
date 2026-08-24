@@ -36,6 +36,21 @@ class Fields
         'service_area' => ['seo_schema_service_area', 'geo_service_area'],
         'person_name' => ['seo_schema_person_name', 'geo_person_name'],
         'person_job' => ['seo_schema_person_job', 'geo_person_job'],
+        'product_name' => ['seo_schema_product_name'],
+        'product_description' => ['seo_schema_product_description'],
+        'product_brand' => ['seo_schema_product_brand'],
+        'product_sku' => ['seo_schema_product_sku'],
+        'product_price' => ['seo_schema_product_price'],
+        'product_currency' => ['seo_schema_product_currency'],
+        'product_availability' => ['seo_schema_product_availability'],
+        'product_image' => ['seo_schema_product_image'],
+        'event_name' => ['seo_schema_event_name'],
+        'event_description' => ['seo_schema_event_description'],
+        'event_start' => ['seo_schema_event_start'],
+        'event_end' => ['seo_schema_event_end'],
+        'event_location' => ['seo_schema_event_location'],
+        'event_url' => ['seo_schema_event_url'],
+        'custom_schema' => ['seo_schema_custom'],
     ];
 
     /**

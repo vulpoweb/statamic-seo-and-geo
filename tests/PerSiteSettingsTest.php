@@ -56,5 +56,16 @@ it('has a sites tab in the settings blueprint', function () {
     $blueprint = YAML::file(__DIR__.'/../resources/blueprints/settings.yaml')->parse();
 
     expect($blueprint['tabs'])->toHaveKey('sites');
-    expect($blueprint['tabs']['sites']['sections'][0]['fields'][0]['handle'])->toBe('site_overrides');
+
+    $field = $blueprint['tabs']['sites']['sections'][0]['fields'][0];
+
+    expect($field['handle'])->toBe('site_overrides');
+
+    // A replicator rather than a grid, because only a replicator's rows collapse
+    // and a per-site override is seven fields tall.
+    expect($field['field']['type'])->toBe('replicator');
+    expect($field['field']['collapse'])->toBeTrue();
+
+    expect(collect($field['field']['sets']['main']['sets']['site']['fields'])->pluck('handle')->all())
+        ->toContain('site', 'site_name', 'default_description');
 });
