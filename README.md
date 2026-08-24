@@ -1,4 +1,4 @@
-# Vulpo SEO
+# SEO & GEO
 
 One addon for everything a Statamic site needs to be found: meta tags, an XML sitemap, redirects, structured data, `robots.txt` and `llms.txt`.
 
@@ -29,11 +29,11 @@ It replaces the stack many Statamic sites run today — `alt-design/alt-seo`, `a
 ## Installation
 
 ```bash
-composer require vulpo/seo
+composer require vulpo/seo-and-geo
 php please vulpo:seo:index-uris
 ```
 
-Working on the addon from a local checkout instead? Point a path repository at it and require `"vulpo/seo": "@dev"`:
+Working on the addon from a local checkout instead? Point a path repository at it and require `"vulpo/seo-and-geo": "@dev"`:
 
 ```json
 "repositories": [
