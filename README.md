@@ -1,30 +1,30 @@
 # SEO & GEO
 
-One addon for everything a Statamic site needs to be found: meta tags, an XML sitemap, redirects, structured data, `robots.txt` and `llms.txt`.
+One addon for everything a Statamic site needs to be found: meta tags, an XML sitemap, redirects, structured data, `robots.txt`, and `llms.txt`.
 
-It replaces the stack many Statamic sites run today — `alt-design/alt-seo`, `alt-design/alt-sitemap`, `alt-design/alt-redirects` and `vulpo/geo` — with a single set of settings, one CP section, and one template tag. Data from those addons is read as a fallback, and a migration command moves it over.
+It replaces the stack many Statamic sites run today. Use it instead of `alt-design/alt-seo`, `alt-design/alt-sitemap`, `alt-design/alt-redirects`, and `vulpo/geo`. You get one set of settings, one CP section, and one template tag. Data from those addons is read as a fallback, and a migration command moves it over.
 
 ## Features
 
-**Live previews** — a read-only field at the top of every SEO tab shows the Google result and the social card as the editor types, truncated by measured pixel width the way Google actually cuts it, with warnings for a missing description, a title that will be cut off, or a page hidden from search. The social card follows the image as it is picked, before the entry is saved. The Google preview deliberately shows no image: Google takes its thumbnail from the page content, not from the sharing image.
+**Live previews.** A read-only field sits at the top of every SEO tab. It shows the Google result and the social card as the editor types. Titles and descriptions are truncated by measured pixel width, which matches how Google cuts them. It warns when the description is missing, the title is too long, or the page is hidden from search. The social card updates as soon as the image is picked, before the entry is saved. The Google preview shows no image on purpose. Google takes its thumbnail from the page content, not from the sharing image.
 
-**Meta tags** — title, description, canonical, robots, Open Graph, Twitter cards, hreflang and search console verification from one tag. Per-page fields override site-wide defaults, and each site can override the defaults again.
+**Meta tags.** Title, description, canonical, robots, Open Graph, Twitter cards, hreflang, and search console verification from one tag. Per-page fields override site-wide defaults. Each site can override those defaults again.
 
-**Sitemap** — `/sitemap.xml`, built from published, routable entries (and optionally taxonomy terms), with per-page "leave out of the sitemap" and collection exclusions. Emits `xhtml:link` hreflang alternates on a multisite install, and becomes a sitemap index (`/sitemap-1.xml`, …) once the URLs no longer fit one file. Cached, and flushed when content changes.
+**Sitemap.** Served at `/sitemap.xml` and built from published, routable entries. Taxonomy terms are optional. Set "leave out of the sitemap" per page, or exclude whole collections. On a multisite install it emits `xhtml:link` hreflang alternates. When the URLs no longer fit one file it becomes a sitemap index (`/sitemap-1.xml`, and so on). It is cached and flushed when content changes.
 
-**Redirects** — a CP screen with exact, wildcard and regex rules (301, 302, 410), each scoped to one site or to all of them. Query strings are supported, so legacy `/index.php?id=42` URLs can be matched. Redirects are checked only when a URL would otherwise 404, so normal page loads pay nothing. When a page's URL changes — renamed slug, moved in the structure, changed date — a redirect is created automatically for that site, plus a wildcard rule for its children.
+**Redirects.** A CP screen with exact, wildcard, and regex rules (301, 302, 410). Each rule is scoped to one site or to all of them. Query strings are supported, so legacy `/index.php?id=42` URLs can be matched. Redirects are checked only when a URL would otherwise 404, so normal page loads pay nothing. When a page's URL changes through a renamed slug, a move in the structure, or a changed date, a redirect is created automatically for that site. A wildcard rule is added for its children too.
 
-**404 log** — every miss is logged per site with hit counts and referrer, searchable and paginated, and can be turned into a redirect in one click.
+**404 log.** Every miss is logged per site with hit counts and referrer. The log is searchable and paginated, and any entry can be turned into a redirect in one click.
 
-**Structured data (JSON-LD)** — Organization or LocalBusiness, WebSite, BreadcrumbList, and a per-page FAQ, Article, Service, Person, Product or Event node, plus a raw JSON-LD field for anything else. Coordinates are geocoded from the address for free through OpenStreetMap and cached.
+**Structured data (JSON-LD).** Organization or LocalBusiness, WebSite, BreadcrumbList, and a per-page FAQ, Article, Service, Person, Product, or Event node. A raw JSON-LD field covers anything else. Coordinates are geocoded from the address for free through OpenStreetMap and cached.
 
-**llms.txt** — `/llms.txt` describing the site and its pages for AI assistants, with an editable summary.
+**llms.txt.** Served at `/llms.txt`, describing the site and its pages for AI assistants. The summary is editable.
 
-**robots.txt** — served from the CP when there is no `public/robots.txt`, with an AI crawler policy (allow all, block all, or pick).
+**robots.txt.** Served from the CP when there is no `public/robots.txt`. It includes an AI crawler policy: allow all, block all, or pick.
 
-**AI crawler log** — see which assistants (ChatGPT, Claude, Perplexity, Gemini, …) actually read the site.
+**AI crawler log.** See which assistants (ChatGPT, Claude, Perplexity, Gemini, and others) actually read the site.
 
-**Dashboard widgets** — recent 404s and AI crawler activity, so problems surface without going looking.
+**Dashboard widgets.** Recent 404s and AI crawler activity, so problems surface without going looking.
 
 ## Installation
 
@@ -60,13 +60,13 @@ To put the widgets on the dashboard, add them in `config/statamic/cp.php`:
 ],
 ```
 
-On a multi-site install, **SEO → Settings → Sites** takes a row per site to override the site name, default description, sharing image, business details and llms.txt summary. Anything left empty falls back to the global value.
+On a multi-site install, **SEO → Settings → Sites** takes a row per site. There you can override the site name, default description, sharing image, business details, and llms.txt summary. Anything left empty falls back to the global value.
 
 ## Tags
 
 | Tag | Output |
 | --- | --- |
-| `{{ vulpo_seo }}` | Meta tags and JSON-LD — everything for the `<head>` |
+| `{{ vulpo_seo }}` | Meta tags and JSON-LD, everything for the `<head>` |
 | `{{ vulpo_seo:meta }}` | Meta tags only |
 | `{{ vulpo_seo:schema }}` | JSON-LD only |
 | `{{ vulpo_seo:title }}` | The resolved page title, as text |
@@ -86,13 +86,13 @@ php please vulpo:seo:migrate --dry-run   # see what would change
 php please vulpo:seo:migrate
 ```
 
-The command renames legacy field handles on every entry and term (`alt_seo_meta_title` → `seo_title`, `geo_faqs` → `seo_schema_faqs`, …), copies the old global settings into the addon settings, and imports any redirects it finds.
+The command renames legacy field handles on every entry and term (`alt_seo_meta_title` becomes `seo_title`, `geo_faqs` becomes `seo_schema_faqs`, and so on). It copies the old global settings into the addon settings, and it imports any redirects it finds.
 
-SEO Pro keeps everything in one `seo` array per entry, so it is translated rather than renamed: `title`, `description`, `canonical_url`, `image`, `robots_indexing`/`robots_following`, `sitemap`, `priority`, `change_frequency` and `json_ld_schema` all find a home, and its site defaults are read from `resources/addons/seo-pro.yaml`. Two things do not travel, because they would render literally in a meta tag: values pointing at another field (`@seo:content/title`) and values containing Antlers. The `seo` array itself is left in place, so SEO Pro keeps working if you have not removed it yet.
+SEO Pro keeps everything in one `seo` array per entry, so it is translated rather than renamed. `title`, `description`, `canonical_url`, `image`, `robots_indexing`/`robots_following`, `sitemap`, `priority`, `change_frequency`, and `json_ld_schema` are all mapped over. Its site defaults are read from `resources/addons/seo-pro.yaml`. Two things are not carried over, because they would render literally in a meta tag: values pointing at another field (`@seo:content/title`) and values containing Antlers. The `seo` array itself is left in place, so SEO Pro keeps working if you have not removed it yet.
 
-Until you run it, legacy handles — including SEO Pro's `seo` array — are still read at render time, so nothing breaks the moment you swap addons. Set `legacy_fallbacks` to `false` in the config once you have migrated.
+Until you run the migration, legacy handles are still read at render time. This includes SEO Pro's `seo` array, so nothing breaks the moment you swap addons. Set `legacy_fallbacks` to `false` in the config once you have migrated.
 
-Replace `{{ alt_seo:meta }}`, `{{ seo_pro:meta }}` and `{{ structured_data }}` in your layout with `{{ vulpo_seo }}`, then remove the old addons from `composer.json`.
+Replace `{{ alt_seo:meta }}`, `{{ seo_pro:meta }}`, and `{{ structured_data }}` in your layout with `{{ vulpo_seo }}`. Then remove the old addons from `composer.json`.
 
 ### Bulk redirects from a CSV
 
@@ -101,11 +101,11 @@ php please vulpo:seo:import-redirects redirects.csv --dry-run
 php please vulpo:seo:import-redirects redirects.csv
 ```
 
-Columns are `from,to,status,site`; a header row is optional and `source`/`destination`/`code` are accepted as aliases. A `*` in the source path makes it a wildcard rule. Rows missing a source or destination are skipped and counted rather than failing the import.
+Columns are `from,to,status,site`. A header row is optional, and `source`/`destination`/`code` are accepted as aliases. A `*` in the source path makes it a wildcard rule. Rows missing a source or destination are skipped and counted rather than failing the import.
 
 ## Configuration
 
-Editor-facing options live in the control panel. Developer options — routes, caching, field injection, the AI crawler list — live in `config/seo.php` (Statamic derives the name from the package, so the config key is `seo`):
+Editor-facing options live in the control panel. Developer options live in `config/seo.php`: routes, caching, field injection, and the AI crawler list. Statamic derives the name from the package, so the config key is `seo`.
 
 ```bash
 php artisan vendor:publish --tag=seo-config
@@ -146,7 +146,7 @@ Settings and redirects belong in version control. The files in `storage` do not.
 
 The addon follows the site. Install the eloquent driver and switch any of its
 repositories to `eloquent`, and everything the addon owns moves to the database
-too — no configuration needed:
+too. No configuration is needed:
 
 | What | Where |
 | --- | --- |
@@ -180,28 +180,28 @@ Override the detection when you want to decide yourself:
 ],
 ```
 
-or `VULPO_SEO_STORAGE_DRIVER=eloquent` in `.env`. Table names are configurable in
+or set `VULPO_SEO_STORAGE_DRIVER=eloquent` in `.env`. Table names are configurable in
 the same block.
 
 ## Notes and limits
 
-- Redirects run inside the `web` middleware group, after the response. A URL that never reaches Laravel (a real file on disk, a route outside `web`) is not redirected.
+- Redirects run inside the `web` middleware group, after the response. A URL that never reaches Laravel (a real file on disk, or a route outside `web`) is not redirected.
 - A physical `public/robots.txt` is served by the web server and wins over this addon. Delete it to let the control panel manage robots.txt.
-- On Laravel Herd and Valet, `/robots.txt` comes back with the right body but a 404 status. Their nginx template gives it an exact-match location with no `try_files`, so nginx looks only for a static file, and the `error_page 404` handler then renders through PHP while keeping the 404. Sitemap and llms.txt are unaffected because they have no such block. Production nginx and Apache configs return 200. To fix it locally, edit the site's config in `~/Library/Application Support/Herd/config/valet/Nginx/<site>` (Valet: `~/.config/valet/Nginx/<site>`):
+- On Laravel Herd and Valet, `/robots.txt` comes back with the right body but a 404 status. Their nginx template gives it an exact-match location with no `try_files`, so nginx looks only for a static file. The `error_page 404` handler then renders through PHP while keeping the 404. Sitemap and llms.txt are unaffected because they have no such block. Production nginx and Apache configs return 200. To fix it locally, edit the site's config in `~/Library/Application Support/Herd/config/valet/Nginx/<site>` (Valet: `~/.config/valet/Nginx/<site>`):
 
   ```nginx
   location = /robots.txt  { access_log off; log_not_found off; try_files $uri "/Applications/Herd.app/Contents/Resources/valet/server.php"; }
   ```
 
-  Then `herd restart nginx`. Herd regenerates that file when the site is re-secured, so the edit may need repeating.
+  Then run `herd restart nginx`. Herd regenerates that file when the site is re-secured, so the edit may need repeating.
 - Automatic redirects react to entry saves. Statamic rewrites child URLs without saving each child, which is why a parent change also adds a `parent/*` wildcard rule.
-- Control panel screens use Statamic's own UI components. Every export of the CP's `@ui` package is registered globally as a `ui-<kebab-name>` Vue component, and the CP compiles a Blade view's output as an in-DOM template, so `<ui-card-panel>`, `<ui-table>` and friends work straight from Blade and the screens match the CP. Two things not to try instead: a `<style>` block in a CP view (the Vue app drops it) and Tailwind variants the CP bundle never compiled (`sm:grid-cols-2` and the like are absent, plain utilities are fine).
+- Control panel screens use Statamic's own UI components. Every export of the CP's `@ui` package is registered globally as a `ui-<kebab-name>` Vue component, and the CP compiles a Blade view's output as an in-DOM template. So `<ui-card-panel>`, `<ui-table>`, and friends work straight from Blade and the screens match the CP. Two things not to try instead: a `<style>` block in a CP view (the Vue app drops it) and Tailwind variants the CP bundle never compiled (`sm:grid-cols-2` and the like are absent, plain utilities are fine).
 - The config file is `config/seo.php`, not `config/vulpo-seo.php`. Statamic derives an addon's slug from the package name, and a custom `extra.statamic.slug` breaks core's settings lookup: settings are written to `resources/addons/{slug}.yaml` but read from `resources/addons/{package-name}.yaml`.
-- Canonical URLs drop the query string, except the pagination parameter (`?page=2` points at itself, so page 2 is not read as a duplicate of page 1). `seo.canonical.trailing_slash` forces a trailing slash on or off; null leaves URLs alone.
-- Entries that only redirect — Statamic's `redirect` field, including `redirect: 404` — are left out of the sitemap and llms.txt. Their `absoluteUrl()` returns the destination, so listing them would advertise another page's URL as one of yours.
-- `/sitemap.xml`, `/robots.txt` and `/llms.txt` send `Cache-Control` built from their `cache_minutes` config, with `stale-while-revalidate` so a CDN never makes a crawler wait for a rebuild. Setting `cache_minutes` to 0 sends `no-store`.
-- The redirects screen is a grid holding every rule at once. It is comfortable into the hundreds; past that, edit `content/vulpo-seo/redirects.yaml` (or the table) directly and use the CSV import for bulk work.
-- Geocoding uses OpenStreetMap Nominatim, whose usage policy requires a descriptive User-Agent; set `VULPO_SEO_GEOCODER_USER_AGENT` for production.
+- Canonical URLs drop the query string, except the pagination parameter. `?page=2` points at itself, so page 2 is not read as a duplicate of page 1. `seo.canonical.trailing_slash` forces a trailing slash on or off. Null leaves URLs alone.
+- Entries that only redirect are left out of the sitemap and llms.txt. This covers Statamic's `redirect` field, including `redirect: 404`. Their `absoluteUrl()` returns the destination, so listing them would advertise another page's URL as one of yours.
+- `/sitemap.xml`, `/robots.txt`, and `/llms.txt` send `Cache-Control` built from their `cache_minutes` config, with `stale-while-revalidate` so a CDN never makes a crawler wait for a rebuild. Setting `cache_minutes` to 0 sends `no-store`.
+- The redirects screen is a grid holding every rule at once. It is comfortable into the hundreds. Past that, edit `content/vulpo-seo/redirects.yaml` (or the table) directly and use the CSV import for bulk work.
+- Geocoding uses OpenStreetMap Nominatim, whose usage policy requires a descriptive User-Agent. Set `VULPO_SEO_GEOCODER_USER_AGENT` for production.
 
 ## Translations
 
@@ -222,9 +222,9 @@ A role with only the view permission sees the data and no write controls.
 
 ## Extending
 
-The preview field is a normal fieldtype, so you can move it, drop it, or add it to a blueprint of your own by publishing the blueprints and editing them.
+The preview field is a normal fieldtype. You can move it, drop it, or add it to a blueprint of your own by publishing the blueprints and editing them.
 
-The control panel script is deliberately buildless: `resources/js/cp.js` registers the preview component through the globals Statamic exposes (`window.Statamic.$components`, `window.Vue`, `window.__STATAMIC__`), which means there is no npm dependency, no Vite config, and no bundle to rebuild when Statamic ships a new minor version. Because addon scripts load before the control panel's own modules, the script waits for `window.Statamic` to appear rather than assuming it is there. It is published to `public/vendor/seo/js/` by `php please statamic:install` or `php artisan vendor:publish --tag=seo --force`.
+The control panel script is buildless on purpose. `resources/js/cp.js` registers the preview component through the globals Statamic exposes (`window.Statamic.$components`, `window.Vue`, `window.__STATAMIC__`). That means there is no npm dependency, no Vite config, and no bundle to rebuild when Statamic ships a new minor version. Because addon scripts load before the control panel's own modules, the script waits for `window.Statamic` to appear rather than assuming it is there. It is published to `public/vendor/seo/js/` by `php please statamic:install` or `php artisan vendor:publish --tag=seo --force`.
 
 ## Testing
 
