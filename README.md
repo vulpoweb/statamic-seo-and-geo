@@ -2,7 +2,7 @@
 
 One addon for everything a Statamic site needs to be found: meta tags, an XML sitemap, redirects, structured data, `robots.txt`, and `llms.txt`.
 
-It replaces the stack many Statamic sites run today. Use it instead of `alt-design/alt-seo`, `alt-design/alt-sitemap`, `alt-design/alt-redirects`, and `vulpo/geo`. You get one set of settings, one CP section, and one template tag. Data from those addons is read as a fallback, and a migration command moves it over.
+It replaces the stack many Statamic sites run today. Use it instead of separate meta, sitemap, redirect, and GEO addons. You get one set of settings, one CP section, and one template tag. Data from those addons is read as a fallback, and a migration command moves it over.
 
 ## Features
 
@@ -79,20 +79,20 @@ In Blade:
 {!! Statamic::tag('vulpo_seo') !!}
 ```
 
-## Migrating from SEO Pro, alt-seo, alt-sitemap, alt-redirects or vulpo/geo
+## Migrating from SEO Pro, vulpo/geo or other SEO addons
 
 ```bash
 php please vulpo:seo:migrate --dry-run   # see what would change
 php please vulpo:seo:migrate
 ```
 
-The command renames legacy field handles on every entry and term (`alt_seo_meta_title` becomes `seo_title`, `geo_faqs` becomes `seo_schema_faqs`, and so on). It copies the old global settings into the addon settings, and it imports any redirects it finds.
+The command renames legacy field handles on every entry and term (`geo_faqs` becomes `seo_schema_faqs`, and so on). It copies the old global settings into the addon settings, and it imports any redirects it finds.
 
 SEO Pro keeps everything in one `seo` array per entry, so it is translated rather than renamed. `title`, `description`, `canonical_url`, `image`, `robots_indexing`/`robots_following`, `sitemap`, `priority`, `change_frequency`, and `json_ld_schema` are all mapped over. Its site defaults are read from `resources/addons/seo-pro.yaml`. Two things are not carried over, because they would render literally in a meta tag: values pointing at another field (`@seo:content/title`) and values containing Antlers. The `seo` array itself is left in place, so SEO Pro keeps working if you have not removed it yet.
 
 Until you run the migration, legacy handles are still read at render time. This includes SEO Pro's `seo` array, so nothing breaks the moment you swap addons. Set `legacy_fallbacks` to `false` in the config once you have migrated.
 
-Replace `{{ alt_seo:meta }}`, `{{ seo_pro:meta }}`, and `{{ structured_data }}` in your layout with `{{ vulpo_seo }}`. Then remove the old addons from `composer.json`.
+Replace `{{ seo_pro:meta }}` and `{{ structured_data }}` in your layout with `{{ vulpo_seo }}`. Then remove the old addons from `composer.json`.
 
 ### Bulk redirects from a CSV
 
@@ -235,7 +235,7 @@ composer test
 
 ## Credits
 
-Built by [Vulpo](https://vulpo.be). Inspired by the MIT-licensed `alt-design/alt-seo` and `alt-design/alt-sitemap` addons, whose field-injection approach showed the way.
+Built by [Vulpo](https://vulpo.be).
 
 ## License
 
