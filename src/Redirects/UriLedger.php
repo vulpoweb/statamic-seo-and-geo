@@ -118,7 +118,7 @@ class UriLedger
      */
     private function legacy(): array
     {
-        $file = YamlFile::inStorage((string) config('seo.redirects.uri_ledger_path', 'vulpo-seo/uris.yaml'));
+        $file = YamlFile::inStorage((string) config('seo-and-geo.redirects.uri_ledger_path', 'vulpo-seo/uris.yaml'));
 
         if (! $file->exists()) {
             return [];

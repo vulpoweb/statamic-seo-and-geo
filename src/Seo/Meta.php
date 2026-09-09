@@ -68,7 +68,7 @@ class Meta
     private function currentUrl(): string
     {
         $url = request()->url();
-        $parameter = (string) config('seo.canonical.pagination_query', 'page');
+        $parameter = (string) config('seo-and-geo.canonical.pagination_query', 'page');
 
         if ($parameter === '') {
             return $url;
@@ -87,7 +87,7 @@ class Meta
      */
     private function normalizeCanonical(string $url): string
     {
-        $preference = config('seo.canonical.trailing_slash');
+        $preference = config('seo-and-geo.canonical.trailing_slash');
 
         if ($preference === null) {
             return $url;

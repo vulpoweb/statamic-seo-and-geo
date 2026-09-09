@@ -70,7 +70,7 @@ class ValueReader
             return $this->seoPro;
         }
 
-        if (! config('seo.legacy_fallbacks', true)) {
+        if (! config('seo-and-geo.legacy_fallbacks', true)) {
             return $this->seoPro = [];
         }
 

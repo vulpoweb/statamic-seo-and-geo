@@ -95,8 +95,8 @@ it('leaves redirect entries out of the llms.txt', function () {
 it('sends cache headers on robots.txt and llms.txt', function () {
     Settings::swap([]);
 
-    config()->set('seo.robots.cache_minutes', 30);
-    config()->set('seo.llms.cache_minutes', 30);
+    config()->set('seo-and-geo.robots.cache_minutes', 30);
+    config()->set('seo-and-geo.llms.cache_minutes', 30);
 
     LlmsTxt::flushCache();
 

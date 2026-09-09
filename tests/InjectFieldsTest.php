@@ -21,7 +21,7 @@ it('adds both tabs to an entry blueprint', function () {
 });
 
 it('skips collections that are excluded in the config', function () {
-    config()->set('seo.fields.exclude_collections', ['articles']);
+    config()->set('seo-and-geo.fields.exclude_collections', ['articles']);
 
     $blueprint = blueprintFor('collections.articles');
 
@@ -31,7 +31,7 @@ it('skips collections that are excluded in the config', function () {
 });
 
 it('skips injection entirely when switched off', function () {
-    config()->set('seo.fields.entries', false);
+    config()->set('seo-and-geo.fields.entries', false);
 
     $blueprint = blueprintFor('collections.articles');
 
@@ -58,7 +58,7 @@ it('adds both tabs to a term blueprint', function () {
 });
 
 it('skips taxonomies that are excluded in the config', function () {
-    config()->set('seo.fields.exclude_taxonomies', ['topics']);
+    config()->set('seo-and-geo.fields.exclude_taxonomies', ['topics']);
 
     $blueprint = blueprintFor('taxonomies.topics');
 
@@ -68,7 +68,7 @@ it('skips taxonomies that are excluded in the config', function () {
 });
 
 it('skips term injection entirely when switched off', function () {
-    config()->set('seo.fields.terms', false);
+    config()->set('seo-and-geo.fields.terms', false);
 
     $blueprint = blueprintFor('taxonomies.topics');
 

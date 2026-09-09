@@ -16,7 +16,7 @@ class PublicCache
 {
     public static function apply(Response $response, string $configKey): Response
     {
-        $minutes = (int) config("seo.{$configKey}.cache_minutes", 60);
+        $minutes = (int) config("seo-and-geo.{$configKey}.cache_minutes", 60);
 
         if ($minutes < 1) {
             return $response->header('Cache-Control', 'no-store');

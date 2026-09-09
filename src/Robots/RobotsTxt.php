@@ -30,7 +30,7 @@ class RobotsTxt
             $lines = array_merge($lines, preg_split('/\R/', $extra) ?: []);
         }
 
-        if (config('seo.sitemap.enabled', true) && Settings::bool('sitemap_enabled', true)) {
+        if (config('seo-and-geo.sitemap.enabled', true) && Settings::bool('sitemap_enabled', true)) {
             $lines[] = '';
             $lines[] = 'Sitemap: '.$this->sitemapUrl();
         }
@@ -64,7 +64,7 @@ class RobotsTxt
         }
 
         /** @var array<string, string> $agents */
-        $agents = config('seo.ai_crawlers.agents', []);
+        $agents = config('seo-and-geo.ai_crawlers.agents', []);
 
         $blocked = $policy === 'block'
             ? array_values($agents)
@@ -83,7 +83,7 @@ class RobotsTxt
 
     private function sitemapUrl(): string
     {
-        $route = trim((string) config('seo.sitemap.route', 'sitemap.xml'), '/');
+        $route = trim((string) config('seo-and-geo.sitemap.route', 'sitemap.xml'), '/');
 
         return rtrim(Site::current()->absoluteUrl(), '/').'/'.$route;
     }

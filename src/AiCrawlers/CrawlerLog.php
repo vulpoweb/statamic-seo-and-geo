@@ -55,7 +55,7 @@ class CrawlerLog
         }
 
         /** @var array<string, string> $agents */
-        $agents = config('seo.ai_crawlers.agents', []);
+        $agents = config('seo-and-geo.ai_crawlers.agents', []);
 
         foreach ($agents as $name => $needle) {
             if (stripos($userAgent, (string) $needle) !== false) {
@@ -79,7 +79,7 @@ class CrawlerLog
 
         $this->rows->pruneBefore(
             'date',
-            now()->subDays((int) config('seo.ai_crawlers.retention_days', 30))->toDateString(),
+            now()->subDays((int) config('seo-and-geo.ai_crawlers.retention_days', 30))->toDateString(),
         );
     }
 

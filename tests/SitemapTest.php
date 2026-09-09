@@ -29,7 +29,7 @@ it('serves a single sitemap while the URLs fit', function () {
 });
 
 it('turns into an index once the URLs no longer fit', function () {
-    config()->set('seo.sitemap.max_urls', 2);
+    config()->set('seo-and-geo.sitemap.max_urls', 2);
 
     foreach (range(1, 5) as $i) {
         Entry::make()->collection('pages')->slug('page-'.$i)->data(['title' => 'Page '.$i])->save();
@@ -47,7 +47,7 @@ it('turns into an index once the URLs no longer fit', function () {
 });
 
 it('serves each page of the index', function () {
-    config()->set('seo.sitemap.max_urls', 2);
+    config()->set('seo-and-geo.sitemap.max_urls', 2);
 
     foreach (range(1, 5) as $i) {
         Entry::make()->collection('pages')->slug('page-'.$i)->data(['title' => 'Page '.$i])->save();
@@ -62,7 +62,7 @@ it('serves each page of the index', function () {
 });
 
 it('no longer drops URLs past the limit', function () {
-    config()->set('seo.sitemap.max_urls', 2);
+    config()->set('seo-and-geo.sitemap.max_urls', 2);
 
     foreach (range(1, 5) as $i) {
         Entry::make()->collection('pages')->slug('page-'.$i)->data(['title' => 'Page '.$i])->save();
@@ -134,7 +134,7 @@ it('leaves out entries that only redirect somewhere else', function () {
 });
 
 it('sends cache headers on the sitemap', function () {
-    config()->set('seo.sitemap.cache_minutes', 15);
+    config()->set('seo-and-geo.sitemap.cache_minutes', 15);
 
     Entry::make()->collection('pages')->slug('about')->data(['title' => 'About'])->save();
     Sitemap::flushCache();
@@ -143,7 +143,7 @@ it('sends cache headers on the sitemap', function () {
 });
 
 it('tells caches not to store the sitemap when caching is off', function () {
-    config()->set('seo.sitemap.cache_minutes', 0);
+    config()->set('seo-and-geo.sitemap.cache_minutes', 0);
 
     Entry::make()->collection('pages')->slug('about')->data(['title' => 'About'])->save();
     Sitemap::flushCache();

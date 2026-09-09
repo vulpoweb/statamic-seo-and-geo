@@ -20,7 +20,7 @@ class Nominatim
     {
         $address = trim($address);
 
-        if ($address === '' || ! config('seo.geocoder.enabled', true)) {
+        if ($address === '' || ! config('seo-and-geo.geocoder.enabled', true)) {
             return null;
         }
 
@@ -33,8 +33,8 @@ class Nominatim
         $coordinates = self::lookup($address);
 
         $days = $coordinates
-            ? (int) config('seo.geocoder.cache_days', 30)
-            : (int) config('seo.geocoder.cache_days_failed', 1);
+            ? (int) config('seo-and-geo.geocoder.cache_days', 30)
+            : (int) config('seo-and-geo.geocoder.cache_days_failed', 1);
 
         Cache::put($key, $coordinates, now()->addDays($days));
 
@@ -48,8 +48,8 @@ class Nominatim
     {
         try {
             $response = Http::withHeaders(['User-Agent' => self::userAgent()])
-                ->timeout((int) config('seo.geocoder.timeout', 5))
-                ->get((string) config('seo.geocoder.endpoint'), [
+                ->timeout((int) config('seo-and-geo.geocoder.timeout', 5))
+                ->get((string) config('seo-and-geo.geocoder.endpoint'), [
                     'q' => $address,
                     'format' => 'json',
                     'limit' => 1,
@@ -79,7 +79,7 @@ class Nominatim
      */
     private static function userAgent(): string
     {
-        return config('seo.geocoder.user_agent')
-            ?: config('app.name').' Statamic site (vulpo/seo)';
+        return config('seo-and-geo.geocoder.user_agent')
+            ?: config('app.name').' Statamic site (vulpo/seo-and-geo)';
     }
 }

@@ -9,14 +9,14 @@ use Statamic\Support\Arr;
 /**
  * Reads the addon's control panel settings.
  *
- * Statamic stores these in `resources/addons/seo.yaml` from the settings
+ * Statamic stores these in `resources/addons/seo-and-geo.yaml` from the settings
  * blueprint (`resources/blueprints/settings.yaml`). Every value arrives as a
  * string because Statamic parses settings through Antlers, so the accessors here
  * cast back to the type the rest of the addon expects.
  */
 class Settings
 {
-    public const PACKAGE = 'vulpo/seo';
+    public const PACKAGE = 'vulpo/seo-and-geo';
 
     private static ?array $values = null;
 

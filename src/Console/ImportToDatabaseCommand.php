@@ -73,10 +73,10 @@ class ImportToDatabaseCommand extends Command
     private function sets(): array
     {
         return [
-            StorageManager::REDIRECTS => YamlFile::inProject((string) config('seo.redirects.path', 'content/vulpo-seo/redirects.yaml')),
-            StorageManager::NOT_FOUND => YamlFile::inStorage((string) config('seo.redirects.not_found_log_path', 'vulpo-seo/not-found.yaml')),
-            StorageManager::AI_CRAWLERS => YamlFile::inStorage((string) config('seo.ai_crawlers.log_path', 'vulpo-seo/ai-crawlers.yaml')),
-            StorageManager::URIS => YamlFile::inStorage((string) config('seo.redirects.uri_ledger_path', 'vulpo-seo/uris.yaml')),
+            StorageManager::REDIRECTS => YamlFile::inProject((string) config('seo-and-geo.redirects.path', 'content/vulpo-seo/redirects.yaml')),
+            StorageManager::NOT_FOUND => YamlFile::inStorage((string) config('seo-and-geo.redirects.not_found_log_path', 'vulpo-seo/not-found.yaml')),
+            StorageManager::AI_CRAWLERS => YamlFile::inStorage((string) config('seo-and-geo.ai_crawlers.log_path', 'vulpo-seo/ai-crawlers.yaml')),
+            StorageManager::URIS => YamlFile::inStorage((string) config('seo-and-geo.redirects.uri_ledger_path', 'vulpo-seo/uris.yaml')),
         ];
     }
 

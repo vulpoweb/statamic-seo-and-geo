@@ -109,7 +109,7 @@ it('renders meta from seo-pro data before anything is migrated', function () {
 });
 
 it('ignores seo-pro data when legacy fallbacks are switched off', function () {
-    config()->set('seo.legacy_fallbacks', false);
+    config()->set('seo-and-geo.legacy_fallbacks', false);
 
     CollectionFacade::make('pages')->routes('/{slug}')->sites(['default'])->save();
 

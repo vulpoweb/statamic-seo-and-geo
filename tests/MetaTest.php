@@ -30,7 +30,7 @@ it('falls back to the legacy alt-seo handles', function () {
 });
 
 it('ignores legacy handles when the fallback is switched off', function () {
-    config()->set('seo.legacy_fallbacks', false);
+    config()->set('seo-and-geo.legacy_fallbacks', false);
     Settings::swap(['append_site_name' => false]);
 
     expect(meta(['title' => 'Page', 'alt_seo_meta_title' => 'Legacy title'])->title())->toBe('Page');
@@ -167,13 +167,13 @@ it('leaves page one canonicalising to the plain URL', function () {
 it('applies the trailing slash preference', function () {
     Settings::swap([]);
 
-    config()->set('seo.canonical.trailing_slash', true);
+    config()->set('seo-and-geo.canonical.trailing_slash', true);
 
     $this->get('/blog?page=2');
 
     expect((new Meta(ValueReader::empty()))->canonical())->toBe(url('/blog').'/?page=2');
 
-    config()->set('seo.canonical.trailing_slash', false);
+    config()->set('seo-and-geo.canonical.trailing_slash', false);
 
     $this->get('/blog/');
 

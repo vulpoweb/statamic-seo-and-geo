@@ -36,7 +36,7 @@ class NotFoundLog
 
     public function record(string $path, ?string $referer = null, ?string $site = null): void
     {
-        if (! config('seo.redirects.log_not_found', true)) {
+        if (! config('seo-and-geo.redirects.log_not_found', true)) {
             return;
         }
 
@@ -50,7 +50,7 @@ class NotFoundLog
             ], fn ($value) => $value !== null),
         );
 
-        $this->rows->keepNewest('last_seen', (int) config('seo.redirects.not_found_log_max', 500));
+        $this->rows->keepNewest('last_seen', (int) config('seo-and-geo.redirects.not_found_log_max', 500));
     }
 
     public function forget(string $path, ?string $site = null): void

@@ -14,7 +14,7 @@ use Vulpo\Seo\Support\YamlFile;
  * must keep everything in flat files and touch no database at all.
  */
 beforeEach(function () {
-    config()->set('seo.storage.driver', 'auto');
+    config()->set('seo-and-geo.storage.driver', 'auto');
 
     foreach (['entries', 'taxonomies', 'globals', 'addon_settings'] as $repository) {
         config()->set("statamic.eloquent-driver.{$repository}.driver", 'file');
@@ -30,7 +30,7 @@ beforeEach(function () {
 it('writes redirects to the project YAML file', function () {
     app(RedirectRepository::class)->add(new Redirect(from: '/old', to: '/new'));
 
-    $path = base_path((string) config('seo.redirects.path'));
+    $path = base_path((string) config('seo-and-geo.redirects.path'));
 
     expect($path)->toBeFile();
     expect(file_get_contents($path))->toContain('from: /old');
@@ -39,7 +39,7 @@ it('writes redirects to the project YAML file', function () {
 it('writes the 404 log to storage', function () {
     app(NotFoundLog::class)->record('/missing', 'https://example.com');
 
-    $path = storage_path('app/'.config('seo.redirects.not_found_log_path'));
+    $path = storage_path('app/'.config('seo-and-geo.redirects.not_found_log_path'));
 
     expect($path)->toBeFile();
     expect(file_get_contents($path))->toContain('/missing');
@@ -48,13 +48,13 @@ it('writes the 404 log to storage', function () {
 it('writes the crawler log to storage', function () {
     app(CrawlerLog::class)->record('Claude', '/');
 
-    expect(storage_path('app/'.config('seo.ai_crawlers.log_path')))->toBeFile();
+    expect(storage_path('app/'.config('seo-and-geo.ai_crawlers.log_path')))->toBeFile();
 });
 
 it('writes the URL index to storage', function () {
     app(UriLedger::class)->remember('123', 'default', '/about');
 
-    $path = storage_path('app/'.config('seo.redirects.uri_ledger_path'));
+    $path = storage_path('app/'.config('seo-and-geo.redirects.uri_ledger_path'));
 
     expect($path)->toBeFile();
     expect(app(UriLedger::class)->get('123', 'default'))->toBe('/about');
@@ -87,7 +87,7 @@ it('loads no migrations on a flat file site', function () {
 );
 
 it('still reads a URL index written in the old map format', function () {
-    YamlFile::inStorage((string) config('seo.redirects.uri_ledger_path'))->write([
+    YamlFile::inStorage((string) config('seo-and-geo.redirects.uri_ledger_path'))->write([
         'default::abc' => '/about',
     ]);
 

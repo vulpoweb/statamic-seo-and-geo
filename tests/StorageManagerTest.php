@@ -15,7 +15,7 @@ function manager(): StorageManager
 }
 
 it('stays on flat files when the site does', function () {
-    config()->set('seo.storage.driver', 'auto');
+    config()->set('seo-and-geo.storage.driver', 'auto');
 
     foreach (['entries', 'taxonomies', 'globals', 'addon_settings'] as $repository) {
         config()->set("statamic.eloquent-driver.{$repository}.driver", 'file');
@@ -26,7 +26,7 @@ it('stays on flat files when the site does', function () {
 });
 
 it('follows the eloquent driver when the site keeps content in the database', function () {
-    config()->set('seo.storage.driver', 'auto');
+    config()->set('seo-and-geo.storage.driver', 'auto');
     config()->set('statamic.eloquent-driver.entries.driver', 'eloquent');
 
     expect(manager()->driver())->toBe('eloquent');
@@ -34,7 +34,7 @@ it('follows the eloquent driver when the site keeps content in the database', fu
 });
 
 it('follows the eloquent driver when only addon settings are in the database', function () {
-    config()->set('seo.storage.driver', 'auto');
+    config()->set('seo-and-geo.storage.driver', 'auto');
 
     foreach (['entries', 'taxonomies', 'globals'] as $repository) {
         config()->set("statamic.eloquent-driver.{$repository}.driver", 'file');
@@ -47,14 +47,14 @@ it('follows the eloquent driver when only addon settings are in the database', f
 
 it('lets the project override the detection', function () {
     config()->set('statamic.eloquent-driver.entries.driver', 'eloquent');
-    config()->set('seo.storage.driver', 'file');
+    config()->set('seo-and-geo.storage.driver', 'file');
 
     expect(manager()->driver())->toBe('file');
     expect(manager()->repository(StorageManager::URIS))->toBeInstanceOf(YamlRows::class);
 });
 
 it('has a repository for every set', function () {
-    config()->set('seo.storage.driver', 'file');
+    config()->set('seo-and-geo.storage.driver', 'file');
 
     foreach ([StorageManager::REDIRECTS, StorageManager::NOT_FOUND, StorageManager::AI_CRAWLERS, StorageManager::URIS] as $set) {
         expect(manager()->repository($set))->toBeInstanceOf(YamlRows::class);

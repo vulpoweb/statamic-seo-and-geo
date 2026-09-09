@@ -61,7 +61,7 @@ class Sitemap
     public function chunkSize(): int
     {
         // Google's own limit is 50.000 URLs or 50MB per file.
-        return max(1, min((int) config('seo.sitemap.max_urls', 5000), 50000));
+        return max(1, min((int) config('seo-and-geo.sitemap.max_urls', 5000), 50000));
     }
 
     /**
@@ -69,7 +69,7 @@ class Sitemap
      */
     public function urls(): array
     {
-        $minutes = (int) config('seo.sitemap.cache_minutes', 60);
+        $minutes = (int) config('seo-and-geo.sitemap.cache_minutes', 60);
 
         if ($minutes < 1) {
             return $this->buildUrls();

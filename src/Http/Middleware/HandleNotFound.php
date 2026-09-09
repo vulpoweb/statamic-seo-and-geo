@@ -26,7 +26,7 @@ class HandleNotFound
     {
         $response = $next($request);
 
-        if ($response->getStatusCode() !== 404 || ! config('seo.redirects.enabled', true)) {
+        if ($response->getStatusCode() !== 404 || ! config('seo-and-geo.redirects.enabled', true)) {
             return $response;
         }
 

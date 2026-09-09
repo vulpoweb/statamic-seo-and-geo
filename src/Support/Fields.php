@@ -70,7 +70,7 @@ class Fields
     {
         $handles = self::MAP[$key] ?? [$key];
 
-        return config('seo.legacy_fallbacks', true) ? $handles : [$handles[0]];
+        return config('seo-and-geo.legacy_fallbacks', true) ? $handles : [$handles[0]];
     }
 
     /**

@@ -14,7 +14,7 @@ use Vulpo\Seo\Support\YamlFile;
  * Anything that only works against YAML shows up here.
  */
 beforeEach(function () {
-    config()->set('seo.storage.driver', 'eloquent');
+    config()->set('seo-and-geo.storage.driver', 'eloquent');
 
     app(StorageManager::class)->flush();
     app()->forgetInstance(RedirectRepository::class);
@@ -91,7 +91,7 @@ it('counts 404s in the database', function () {
 });
 
 it('caps the 404 log', function () {
-    config()->set('seo.redirects.not_found_log_max', 3);
+    config()->set('seo-and-geo.redirects.not_found_log_max', 3);
 
     $log = app(NotFoundLog::class);
 
@@ -115,7 +115,7 @@ it('counts AI crawler visits in the database', function () {
 });
 
 it('prunes crawler rows past the retention window', function () {
-    config()->set('seo.ai_crawlers.retention_days', 7);
+    config()->set('seo-and-geo.ai_crawlers.retention_days', 7);
 
     app('db')->table('vulpo_seo_ai_crawlers')->insert([
         'date' => now()->subDays(30)->toDateString(),
@@ -154,13 +154,13 @@ it('writes nothing to the flat files', function () {
     app(RedirectRepository::class)->add(new Redirect(from: '/old', to: '/new'));
     app(NotFoundLog::class)->record('/missing');
 
-    expect(base_path((string) config('seo.redirects.path')))->not->toBeFile();
-    expect(storage_path('app/'.config('seo.redirects.not_found_log_path')))->not->toBeFile();
+    expect(base_path((string) config('seo-and-geo.redirects.path')))->not->toBeFile();
+    expect(storage_path('app/'.config('seo-and-geo.redirects.not_found_log_path')))->not->toBeFile();
 });
 
 it('imports flat file data into the database', function () {
     // Write the flat files the way a file-driver site would have left them.
-    config()->set('seo.storage.driver', 'file');
+    config()->set('seo-and-geo.storage.driver', 'file');
     app(StorageManager::class)->flush();
     app()->forgetInstance(RedirectRepository::class);
     app()->forgetInstance(NotFoundLog::class);
@@ -169,7 +169,7 @@ it('imports flat file data into the database', function () {
     app(NotFoundLog::class)->record('/missing', 'https://example.com');
 
     // Then switch over and import.
-    config()->set('seo.storage.driver', 'eloquent');
+    config()->set('seo-and-geo.storage.driver', 'eloquent');
     app(StorageManager::class)->flush();
     app()->forgetInstance(RedirectRepository::class);
     app()->forgetInstance(NotFoundLog::class);
@@ -181,12 +181,12 @@ it('imports flat file data into the database', function () {
 });
 
 it('imports without duplicating on a second run', function () {
-    config()->set('seo.storage.driver', 'file');
+    config()->set('seo-and-geo.storage.driver', 'file');
     app(StorageManager::class)->flush();
     app()->forgetInstance(RedirectRepository::class);
     app(RedirectRepository::class)->add(new Redirect(from: '/old', to: '/new'));
 
-    config()->set('seo.storage.driver', 'eloquent');
+    config()->set('seo-and-geo.storage.driver', 'eloquent');
     app(StorageManager::class)->flush();
     app()->forgetInstance(RedirectRepository::class);
 
@@ -197,7 +197,7 @@ it('imports without duplicating on a second run', function () {
 });
 
 it('refuses to import while the site is on flat files', function () {
-    config()->set('seo.storage.driver', 'file');
+    config()->set('seo-and-geo.storage.driver', 'file');
     app(StorageManager::class)->flush();
 
     $this->artisan('vulpo:seo:import-to-database')->assertFailed();
@@ -205,7 +205,7 @@ it('refuses to import while the site is on flat files', function () {
 
 it('imports the URL index written in the old map format', function () {
     // Before the storage layer, the index was `site::id: /uri` rather than rows.
-    YamlFile::inStorage((string) config('seo.redirects.uri_ledger_path'))->write([
+    YamlFile::inStorage((string) config('seo-and-geo.redirects.uri_ledger_path'))->write([
         'default::abc' => '/about',
         'default::def' => '/contact',
     ]);
@@ -222,13 +222,13 @@ it('exports database rows back to flat files', function () {
 
     $this->artisan('vulpo:seo:export-to-files')->assertSuccessful();
 
-    expect(base_path((string) config('seo.redirects.path')))->toBeFile();
-    expect(file_get_contents(base_path((string) config('seo.redirects.path'))))->toContain('/old');
-    expect(file_get_contents(storage_path('app/'.config('seo.redirects.not_found_log_path'))))->toContain('/missing');
+    expect(base_path((string) config('seo-and-geo.redirects.path')))->toBeFile();
+    expect(file_get_contents(base_path((string) config('seo-and-geo.redirects.path'))))->toContain('/old');
+    expect(file_get_contents(storage_path('app/'.config('seo-and-geo.redirects.not_found_log_path'))))->toContain('/missing');
 });
 
 it('refuses to export while the site is on flat files', function () {
-    config()->set('seo.storage.driver', 'file');
+    config()->set('seo-and-geo.storage.driver', 'file');
     app(StorageManager::class)->flush();
 
     $this->artisan('vulpo:seo:export-to-files')->assertFailed();

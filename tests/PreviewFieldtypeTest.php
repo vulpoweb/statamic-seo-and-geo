@@ -28,7 +28,7 @@ it('is registered as a fieldtype', function () {
 });
 
 it('registers the control panel script', function () {
-    expect(Statamic::availableScripts(request()))->toHaveKey('seo');
+    expect(Statamic::availableScripts(request()))->toHaveKey('seo-and-geo');
 });
 
 it('hands the browser the site defaults it cannot know', function () {

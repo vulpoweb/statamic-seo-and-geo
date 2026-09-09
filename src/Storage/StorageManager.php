@@ -28,7 +28,7 @@ class StorageManager
 
     public function driver(): string
     {
-        $driver = config('seo.storage.driver', 'auto');
+        $driver = config('seo-and-geo.storage.driver', 'auto');
 
         return $driver === 'auto' ? $this->detectDriver() : $driver;
     }
@@ -94,16 +94,16 @@ class StorageManager
     private function yaml(string $set): RowRepository
     {
         return new YamlRows(match ($set) {
-            self::REDIRECTS => YamlFile::inProject((string) config('seo.redirects.path', 'content/vulpo-seo/redirects.yaml')),
-            self::NOT_FOUND => YamlFile::inStorage((string) config('seo.redirects.not_found_log_path', 'vulpo-seo/not-found.yaml')),
-            self::AI_CRAWLERS => YamlFile::inStorage((string) config('seo.ai_crawlers.log_path', 'vulpo-seo/ai-crawlers.yaml')),
-            self::URIS => YamlFile::inStorage((string) config('seo.redirects.uri_ledger_path', 'vulpo-seo/uris.yaml')),
+            self::REDIRECTS => YamlFile::inProject((string) config('seo-and-geo.redirects.path', 'content/vulpo-seo/redirects.yaml')),
+            self::NOT_FOUND => YamlFile::inStorage((string) config('seo-and-geo.redirects.not_found_log_path', 'vulpo-seo/not-found.yaml')),
+            self::AI_CRAWLERS => YamlFile::inStorage((string) config('seo-and-geo.ai_crawlers.log_path', 'vulpo-seo/ai-crawlers.yaml')),
+            self::URIS => YamlFile::inStorage((string) config('seo-and-geo.redirects.uri_ledger_path', 'vulpo-seo/uris.yaml')),
             default => throw new \InvalidArgumentException("Unknown storage set [{$set}]."),
         });
     }
 
     private function table(string $set): string
     {
-        return (string) config("seo.storage.tables.{$set}", 'vulpo_seo_'.$set);
+        return (string) config("seo-and-geo.storage.tables.{$set}", 'vulpo_seo_'.$set);
     }
 }
