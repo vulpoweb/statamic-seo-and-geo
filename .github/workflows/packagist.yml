@@ -3,6 +3,7 @@ name: Update Packagist
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
 
 jobs:
   update:
