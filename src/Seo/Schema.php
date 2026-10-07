@@ -7,6 +7,7 @@ use Statamic\Facades\Entry;
 use Statamic\Facades\Site;
 use Statamic\Tags\Context;
 use Vulpo\Seo\Schema\SchemaContext;
+use Vulpo\Seo\Schema\SchemaNode;
 use Vulpo\Seo\Schema\Support\Normalize;
 use Vulpo\Seo\Support\Assets;
 use Vulpo\Seo\Support\Nominatim;
@@ -27,20 +28,26 @@ class Schema
         private readonly ValueReader $values,
         private readonly ?EntryContract $entry = null,
         private readonly ?string $canonical = null,
+        private readonly ?SeoOverlay $overlay = null,
     ) {}
 
-    public static function forContext(Context $context): self
+    public static function forContext(Context $context, ?SeoOverlay $overlay = null): self
     {
+        $overlay ??= app(SeoOverlay::class);
+
         $id = $context->raw('id');
         $entry = is_string($id) || is_int($id) ? Entry::find($id) : null;
 
         return new self(
-            values: ValueReader::fromContext($context),
+            values: ValueReader::fromContext($context)
+                ->withOverrides($overlay->overrides())
+                ->withDefaults($overlay->defaultValues()),
             entry: $entry instanceof EntryContract ? $entry : null,
             // Taken from Meta rather than worked out again, so the @ids in the
             // graph are the address the page actually advertises -- including
             // its pagination and trailing-slash rules.
-            canonical: Meta::forContext($context)->canonical(),
+            canonical: Meta::forContext($context, $overlay)->canonical(),
+            overlay: $overlay,
         );
     }
 
@@ -110,12 +117,13 @@ class Schema
         // returns one once there is a breadcrumb or a page node to hang off it.
         $webPage = $this->webPage(array_values($nodes), $page);
 
-        return $this->dedupeById(array_values(array_filter(array_merge(
+        return $this->dedupeById($this->withoutRemovedTypes(array_values(array_filter(array_merge(
             $nodes,
             [$webPage],
             $page,
             $this->customNodes(),
-        ))));
+            $this->overlayNodes(),
+        )))));
     }
 
     /**
@@ -189,6 +197,10 @@ class Schema
      */
     public function pageNodes(): array
     {
+        if ($this->overlay?->removesAllSchema()) {
+            return [];
+        }
+
         $nodes = [$this->page()];
 
         if ($this->values->string('schema_type') !== 'faq') {
@@ -215,6 +227,52 @@ class Schema
         }
 
         return [$custom];
+    }
+
+    /**
+     * Nodes a route added by hand. Emitted after the field-driven ones so that
+     * sharing an @id replaces rather than duplicates.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function overlayNodes(): array
+    {
+        if (! $this->overlay) {
+            return [];
+        }
+
+        $context = $this->context();
+        $nodes = [];
+
+        foreach ($this->overlay->nodes() as $node) {
+            $built = $node instanceof SchemaNode ? $node->toArray($context) : $node;
+
+            if (! is_array($built) || $built === []) {
+                continue;
+            }
+
+            $nodes[] = array_merge(['@context' => 'https://schema.org'], $built);
+        }
+
+        return $nodes;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $nodes
+     * @return array<int, array<string, mixed>>
+     */
+    private function withoutRemovedTypes(array $nodes): array
+    {
+        $removed = $this->overlay?->removedTypes() ?? [];
+
+        if ($removed === []) {
+            return $nodes;
+        }
+
+        return array_values(array_filter(
+            $nodes,
+            fn (array $node) => ! in_array($node['@type'] ?? null, $removed, true),
+        ));
     }
 
     private function context(): SchemaContext
@@ -348,6 +406,10 @@ class Schema
      */
     public function breadcrumbs(): ?array
     {
+        if ($supplied = $this->overlay?->breadcrumbTrail()) {
+            return $this->breadcrumbsFrom($supplied);
+        }
+
         if (! $this->entry) {
             return null;
         }
@@ -388,6 +450,59 @@ class Schema
             '@context' => 'https://schema.org',
             '@type' => 'BreadcrumbList',
             '@id' => $this->context()->breadcrumbId(),
+            'itemListElement' => $items,
+        ];
+    }
+
+    /**
+     * A trail a route handed us, with Home in front of it.
+     *
+     * A crumb with no URL is dropped rather than emitted bare: schema.org only
+     * allows a ListItem without an `item` as the last one, and a trail that
+     * links to a page which does not exist is worse than a shorter trail.
+     *
+     * @param  array<int, array{name: string, url?: string|null}>  $crumbs
+     * @return array<string, mixed>|null
+     */
+    private function breadcrumbsFrom(array $crumbs): ?array
+    {
+        $context = $this->context();
+
+        array_unshift($crumbs, ['name' => __('Home'), 'url' => $context->base().'/']);
+
+        $last = array_key_last($crumbs);
+        $items = [];
+
+        foreach ($crumbs as $index => $crumb) {
+            $name = Normalize::text($crumb['name'] ?? null);
+
+            if ($name === null) {
+                continue;
+            }
+
+            $url = $context->absolute($crumb['url'] ?? null)
+                ?? ($index === $last ? $context->canonical() : null);
+
+            if ($url === null) {
+                continue;
+            }
+
+            $items[] = [
+                '@type' => 'ListItem',
+                'position' => count($items) + 1,
+                'name' => $name,
+                'item' => $url,
+            ];
+        }
+
+        if (count($items) < 2) {
+            return null;
+        }
+
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'BreadcrumbList',
+            '@id' => $context->breadcrumbId(),
             'itemListElement' => $items,
         ];
     }

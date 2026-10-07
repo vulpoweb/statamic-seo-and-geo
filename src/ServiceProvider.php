@@ -23,13 +23,17 @@ use Vulpo\Seo\Console\MigrateCommand;
 use Vulpo\Seo\Fieldtypes\SeoPreview;
 use Vulpo\Seo\Http\Middleware\HandleNotFound;
 use Vulpo\Seo\Http\Middleware\LogAiCrawlers;
+use Vulpo\Seo\Http\Middleware\Noindex;
 use Vulpo\Seo\Listeners\FlushCaches;
 use Vulpo\Seo\Listeners\InjectFields;
 use Vulpo\Seo\Listeners\TrackUriChanges;
 use Vulpo\Seo\Redirects\NotFoundLog;
 use Vulpo\Seo\Redirects\RedirectRepository;
 use Vulpo\Seo\Redirects\UriLedger;
+use Vulpo\Seo\Seo\SeoManager;
+use Vulpo\Seo\Seo\SeoOverlay;
 use Vulpo\Seo\Storage\StorageManager;
+use Vulpo\Seo\Support\ProviderRegistry;
 use Vulpo\Seo\Support\Settings;
 use Vulpo\Seo\Tags\SeoTags;
 use Vulpo\Seo\Widgets\AiCrawlersWidget;
@@ -106,10 +110,33 @@ class ServiceProvider extends AddonServiceProvider
         $this->app->singleton(UriLedger::class, fn ($app) => new UriLedger(
             $app[StorageManager::class]->repository(StorageManager::URIS),
         ));
+
+        /*
+         * What a route said about the page it is rendering. Scoped, so Octane
+         * clears it between requests -- a singleton would carry one product's
+         * title onto the next request served by the same worker.
+         */
+        $this->app->scoped(SeoOverlay::class);
+
+        /*
+         * Who else contributes URLs. A real singleton, because packages
+         * register from boot(), which under Octane runs once per worker and not
+         * once per request.
+         */
+        $this->app->singleton('vulpo-seo.providers.sitemap', fn () => new ProviderRegistry);
+        $this->app->singleton('vulpo-seo.providers.llms', fn () => new ProviderRegistry);
+
+        $this->app->scoped(SeoManager::class, fn ($app) => new SeoManager(
+            $app[SeoOverlay::class],
+            $app['vulpo-seo.providers.sitemap'],
+            $app['vulpo-seo.providers.llms'],
+        ));
     }
 
     public function bootAddon(): void
     {
+        $this->app['router']->aliasMiddleware('seo.noindex', Noindex::class);
+
         // Strings go through __(), so a project can translate the whole addon by
         // dropping its own {locale}.json next to these.
         $this->loadJsonTranslationsFrom(__DIR__.'/../lang');
