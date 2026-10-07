@@ -168,3 +168,33 @@ it('ignores invalid custom JSON instead of breaking the page', function () {
     expect(schema(['seo_schema_custom' => '"just a string"'])->custom())->toBeNull();
     expect(schema(['seo_schema_custom' => '{}'])->custom())->toBeNull();
 });
+
+it('offers the site search to Google when a template is configured', function () {
+    Settings::swap(['site_name' => 'Vulpo', 'search_url' => '/zoeken?q={q}']);
+
+    $website = collect(schema()->nodes())->firstWhere('@type', 'WebSite');
+
+    expect($website['potentialAction'])->toBe([
+        '@type' => 'SearchAction',
+        'target' => [
+            '@type' => 'EntryPoint',
+            'urlTemplate' => url('/zoeken').'?q={search_term_string}',
+        ],
+        'query-input' => 'required name=search_term_string',
+    ]);
+});
+
+it('offers no search action without somewhere to put the term', function () {
+    // A URL with no {q} is a link to the search page, not a search.
+    Settings::swap(['site_name' => 'Vulpo', 'search_url' => '/zoeken']);
+
+    expect(collect(schema()->nodes())->firstWhere('@type', 'WebSite'))
+        ->not->toHaveKey('potentialAction');
+});
+
+it('falls back to a bare url for a logo it cannot measure', function () {
+    Settings::swap(['site_name' => 'Vulpo', 'logo' => '/logo.png']);
+
+    expect(collect(schema()->nodes())->firstWhere('@type', 'Organization')['logo'])
+        ->toBe(url('/logo.png'));
+});

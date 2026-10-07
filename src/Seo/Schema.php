@@ -6,6 +6,7 @@ use Statamic\Contracts\Entries\Entry as EntryContract;
 use Statamic\Facades\Entry;
 use Statamic\Facades\Site;
 use Statamic\Tags\Context;
+use Vulpo\Seo\Schema\SchemaContext;
 use Vulpo\Seo\Schema\Support\Normalize;
 use Vulpo\Seo\Support\Assets;
 use Vulpo\Seo\Support\Nominatim;
@@ -25,6 +26,7 @@ class Schema
     public function __construct(
         private readonly ValueReader $values,
         private readonly ?EntryContract $entry = null,
+        private readonly ?string $canonical = null,
     ) {}
 
     public static function forContext(Context $context): self
@@ -35,32 +37,200 @@ class Schema
         return new self(
             values: ValueReader::fromContext($context),
             entry: $entry instanceof EntryContract ? $entry : null,
+            // Taken from Meta rather than worked out again, so the @ids in the
+            // graph are the address the page actually advertises -- including
+            // its pagination and trailing-slash rules.
+            canonical: Meta::forContext($context)->canonical(),
         );
     }
 
+    /**
+     * One script holding a @graph, so the nodes can point at each other: the
+     * WebPage at the WebSite, the Product at the Organization selling it.
+     *
+     * Set `seo-and-geo.schema.graph` to false for the older shape, one script
+     * per node, each carrying its own @context.
+     */
     public function render(): string
     {
-        return implode("\n", array_map(
-            fn (array $node) => '<script type="application/ld+json">'.json_encode(
-                $node,
-                JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT
-            ).'</script>',
-            $this->nodes(),
-        ));
+        $nodes = $this->nodes();
+
+        if ($nodes === []) {
+            return '';
+        }
+
+        if (! config('seo-and-geo.schema.graph', true)) {
+            return implode("\n", array_map(
+                fn (array $node) => $this->script($node),
+                $nodes,
+            ));
+        }
+
+        return $this->script($this->graph());
+    }
+
+    /**
+     * The nodes as one graph. Each node keeps its own @context in nodes(), so
+     * anything built against that keeps working; the duplicates are stripped
+     * here, where the graph supplies one for all of them.
+     *
+     * @return array<string, mixed>
+     */
+    public function graph(): array
+    {
+        return [
+            '@context' => 'https://schema.org',
+            '@graph' => array_map(
+                function (array $node): array {
+                    unset($node['@context']);
+
+                    return $node;
+                },
+                $this->nodes(),
+            ),
+        ];
+    }
+
+    /**
+     * Self-contained nodes, each with its own @context.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function nodes(): array
+    {
+        $nodes = array_filter([
+            Settings::bool('schema_organization', true) ? $this->organization() : null,
+            Settings::bool('schema_website', true) ? $this->website() : null,
+            Settings::bool('schema_breadcrumbs', true) ? $this->breadcrumbs() : null,
+        ]);
+
+        $page = array_values(array_filter($this->pageNodes()));
+
+        // A WebPage with nothing to link to is noise, so webPage() only
+        // returns one once there is a breadcrumb or a page node to hang off it.
+        $webPage = $this->webPage(array_values($nodes), $page);
+
+        return $this->dedupeById(array_values(array_filter(array_merge(
+            $nodes,
+            [$webPage],
+            $page,
+            $this->customNodes(),
+        ))));
+    }
+
+    /**
+     * Later nodes win on a shared @id, which is how a route can replace a
+     * field-driven node without either side knowing about the other.
+     *
+     * @param  array<int, array<string, mixed>>  $nodes
+     * @return array<int, array<string, mixed>>
+     */
+    private function dedupeById(array $nodes): array
+    {
+        $byId = [];
+        $anonymous = [];
+
+        foreach ($nodes as $node) {
+            if (is_string($id = $node['@id'] ?? null)) {
+                $byId[$id] = $node;
+
+                continue;
+            }
+
+            $anonymous[] = $node;
+        }
+
+        return array_values(array_merge(array_values($byId), $anonymous));
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $siteNodes
+     * @param  array<int, array<string, mixed>>  $pageNodes
+     * @return array<string, mixed>|null
+     */
+    private function webPage(array $siteNodes, array $pageNodes): ?array
+    {
+        if (! config('seo-and-geo.schema.webpage', true)) {
+            return null;
+        }
+
+        $breadcrumb = collect($siteNodes)->firstWhere('@type', 'BreadcrumbList');
+
+        if ($breadcrumb === null && $pageNodes === []) {
+            return null;
+        }
+
+        $context = $this->context();
+        $website = collect($siteNodes)->firstWhere('@type', 'WebSite');
+
+        return Normalize::compact([
+            '@context' => 'https://schema.org',
+            '@type' => 'WebPage',
+            '@id' => $context->webPageId(),
+            'url' => $context->canonical(),
+            'name' => $this->pageTitle(),
+            'inLanguage' => $this->language(),
+            'isPartOf' => $website ? ['@id' => $website['@id']] : null,
+            'breadcrumb' => $breadcrumb ? ['@id' => $breadcrumb['@id']] : null,
+            'mainEntity' => isset($pageNodes[0]['@id']) ? ['@id' => $pageNodes[0]['@id']] : null,
+            'datePublished' => Normalize::date($this->entry?->date()),
+            'dateModified' => Normalize::date($this->entry?->lastModified()),
+        ]);
+    }
+
+    /**
+     * The nodes a single page contributes.
+     *
+     * FAQ rows used to be reachable only by setting the page type to "FAQ",
+     * which meant a product page with a questions block had to choose. They
+     * stand alongside now, because both are true of the page.
+     *
+     * @return array<int, array<string, mixed>|null>
+     */
+    public function pageNodes(): array
+    {
+        $nodes = [$this->page()];
+
+        if ($this->values->string('schema_type') !== 'faq') {
+            $nodes[] = $this->faq();
+        }
+
+        return $nodes;
     }
 
     /**
      * @return array<int, array<string, mixed>>
      */
-    public function nodes(): array
+    private function customNodes(): array
     {
-        return array_values(array_filter([
-            Settings::bool('schema_organization', true) ? $this->organization() : null,
-            Settings::bool('schema_website', true) ? $this->website() : null,
-            Settings::bool('schema_breadcrumbs', true) ? $this->breadcrumbs() : null,
-            $this->page(),
-            $this->custom(),
-        ]));
+        $custom = $this->custom();
+
+        if ($custom === null) {
+            return [];
+        }
+
+        // A top-level array is a list of nodes, not one node.
+        if (array_is_list($custom)) {
+            return array_values(array_filter($custom, 'is_array'));
+        }
+
+        return [$custom];
+    }
+
+    private function context(): SchemaContext
+    {
+        return SchemaContext::for($this->canonical ?? request()->url(), $this->language());
+    }
+
+    /**
+     * @param  array<string, mixed>  $node
+     */
+    private function script(array $node): string
+    {
+        return '<script type="application/ld+json">'.json_encode(
+            $node,
+            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT
+        ).'</script>';
     }
 
     /**
@@ -134,7 +304,43 @@ class Schema
             'url' => $this->base().'/',
             'inLanguage' => count($languages) > 1 ? $languages : $this->language(),
             'publisher' => ['@id' => $this->base().'/#organization'],
+            'potentialAction' => $this->searchAction(),
         ]);
+    }
+
+    /**
+     * The sitelinks search box, so Google can offer your own search from the
+     * result page.
+     *
+     * Needs a URL template carrying {q} -- '/zoeken?q={q}'. Without the
+     * placeholder there is nowhere to put the term, so no action is emitted
+     * rather than a broken one.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function searchAction(): ?array
+    {
+        $template = Settings::string('search_url');
+
+        if (! $template || ! str_contains($template, '{q}')) {
+            return null;
+        }
+
+        $target = Normalize::url(str_replace('{q}', '__VULPO_Q__', $template));
+
+        if (! $target) {
+            return null;
+        }
+
+        return [
+            '@type' => 'SearchAction',
+            'target' => [
+                '@type' => 'EntryPoint',
+                // Substituted after absolutising, so url() cannot encode the braces.
+                'urlTemplate' => str_replace('__VULPO_Q__', '{search_term_string}', $target),
+            ],
+            'query-input' => 'required name=search_term_string',
+        ];
     }
 
     /**
@@ -181,6 +387,7 @@ class Schema
         return [
             '@context' => 'https://schema.org',
             '@type' => 'BreadcrumbList',
+            '@id' => $this->context()->breadcrumbId(),
             'itemListElement' => $items,
         ];
     }
@@ -233,6 +440,7 @@ class Schema
         return array_filter([
             '@context' => 'https://schema.org',
             '@type' => 'FAQPage',
+            '@id' => $this->context()->fragment('faq'),
             'inLanguage' => $this->language(),
             'mainEntity' => $questions,
         ]);
@@ -300,6 +508,7 @@ class Schema
         return array_filter([
             '@context' => 'https://schema.org',
             '@type' => 'Product',
+            '@id' => $this->context()->fragment('product'),
             'name' => $this->values->string('product_name') ?: $this->pageTitle(),
             'description' => $this->values->string('product_description'),
             'sku' => $this->values->string('product_sku'),
@@ -342,7 +551,7 @@ class Schema
      * A raw JSON-LD escape hatch, for the types this addon does not model.
      * Invalid JSON is skipped rather than breaking the page.
      *
-     * @return array<string, mixed>|null
+     * @return array<array-key, mixed>|null
      */
     public function custom(): ?array
     {
@@ -358,6 +567,11 @@ class Schema
 
         if (! is_array($decoded) || $decoded === []) {
             return null;
+        }
+
+        // A list of nodes is handed back as it is; customNodes() splits it.
+        if (array_is_list($decoded)) {
+            return $decoded;
         }
 
         // Allow a bare node without the boilerplate.
