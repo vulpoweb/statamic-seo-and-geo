@@ -163,14 +163,24 @@ final class Normalize
 
     public static function currency(?string $value): ?string
     {
-        $value = strtoupper(trim((string) $value));
+        // Absent is not the same as invalid: nothing to validate, nothing to
+        // complain about. The caller falls back to its own default.
+        if ($value === null || trim($value) === '') {
+            return null;
+        }
+
+        $value = strtoupper(trim($value));
 
         return preg_match('/^[A-Z]{3}$/', $value) === 1 ? $value : self::reject('currency', $value);
     }
 
     public static function country(?string $value): ?string
     {
-        $value = strtoupper(trim((string) $value));
+        if ($value === null || trim($value) === '') {
+            return null;
+        }
+
+        $value = strtoupper(trim($value));
 
         return preg_match('/^[A-Z]{2}$/', $value) === 1 ? $value : self::reject('country code', $value);
     }

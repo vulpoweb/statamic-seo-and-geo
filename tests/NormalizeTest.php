@@ -140,3 +140,13 @@ it('drops rather than throws when strict mode is off', function () {
         ->and(Normalize::currency('euro'))->toBeNull()
         ->and(Normalize::date('binnenkort'))->toBeNull();
 });
+
+it('treats an absent currency or country as nothing to validate', function () {
+    // Absent is not invalid. Strict mode is on here, so throwing would mean a
+    // shop that has not filled in a currency cannot render a product page.
+    expect(Normalize::currency(null))->toBeNull()
+        ->and(Normalize::currency(''))->toBeNull()
+        ->and(Normalize::currency('  '))->toBeNull()
+        ->and(Normalize::country(null))->toBeNull()
+        ->and(Normalize::country(''))->toBeNull();
+});
