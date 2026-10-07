@@ -137,3 +137,17 @@ it('serves the last good links while the source is down', function () {
 
     expect(LlmsTxt::forCurrentSite()->render())->toContain('/badkamer');
 });
+
+it('does not answer the full file with the short one', function () {
+    // The two files ask the provider different questions. Sharing a cache
+    // entry meant whichever was fetched first decided what both contained,
+    // and the short answer is the plausible-looking one.
+    config()->set('seo-and-geo.llms.cache_minutes', 60);
+    Seo::llms()->register(FakeCatalogue::class);
+
+    LlmsTxt::forCurrentSite()->render();
+
+    expect(LlmsTxt::forCurrentSite()->renderFull())
+        ->toContain('## Producten')
+        ->toContain('/product/p1');
+});

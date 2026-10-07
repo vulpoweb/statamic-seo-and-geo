@@ -39,6 +39,7 @@ class LlmsTxt
             // Not the last-good copies: those are what keep the file whole
             // while a source is unreachable.
             ProviderResults::forgetAll(self::CACHE_KEY, $site->handle(), $registry);
+            ProviderResults::forgetAll(self::CACHE_KEY.':full', $site->handle(), $registry);
         }
     }
 
@@ -48,12 +49,17 @@ class LlmsTxt
             Cache::forget(self::CACHE_KEY.':'.$site->handle());
             Cache::forget(self::CACHE_KEY.':full:'.$site->handle());
             ProviderResults::forget(self::CACHE_KEY, $site->handle(), $key);
+            ProviderResults::forget(self::CACHE_KEY.':full', $site->handle(), $key);
         }
     }
 
     public function render(): string
     {
-        return $this->cached(self::CACHE_KEY.':'.$this->site, fn (ProviderResults $r) => $this->build($r, full: false));
+        return $this->cached(
+            self::CACHE_KEY.':'.$this->site,
+            fn (ProviderResults $r) => $this->build($r, full: false),
+            full: false,
+        );
     }
 
     /**
@@ -65,25 +71,29 @@ class LlmsTxt
      */
     public function renderFull(): string
     {
-        return $this->cached(self::CACHE_KEY.':full:'.$this->site, fn (ProviderResults $r) => $this->build($r, full: true));
+        return $this->cached(
+            self::CACHE_KEY.':full:'.$this->site,
+            fn (ProviderResults $r) => $this->build($r, full: true),
+            full: true,
+        );
     }
 
     /**
      * @param  \Closure(ProviderResults): string  $build
      */
-    private function cached(string $key, \Closure $build): string
+    private function cached(string $key, \Closure $build, bool $full): string
     {
         $minutes = (int) config('seo-and-geo.llms.cache_minutes', 60);
 
         if ($minutes < 1) {
-            return $build($this->providerResults());
+            return $build($this->providerResults($full));
         }
 
         if (is_string($cached = Cache::get($key))) {
             return $cached;
         }
 
-        $results = $this->providerResults();
+        $results = $this->providerResults($full);
         $rendered = $build($results);
 
         Cache::put($key, $rendered, now()->addMinutes($results->ttlMinutes($minutes)));
@@ -91,11 +101,16 @@ class LlmsTxt
         return $rendered;
     }
 
-    private function providerResults(): ProviderResults
+    /**
+     * The two files ask a provider different questions, so they cannot share a
+     * cache entry -- llms.txt would otherwise answer llms-full.txt with its
+     * own short list, and nobody would be any the wiser.
+     */
+    private function providerResults(bool $full): ProviderResults
     {
         return new ProviderResults(
             app('vulpo-seo.providers.llms'),
-            self::CACHE_KEY,
+            self::CACHE_KEY.($full ? ':full' : ''),
             'llms',
             $this->site,
         );
