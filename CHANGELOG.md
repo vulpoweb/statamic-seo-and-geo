@@ -2,6 +2,44 @@
 
 ## Unreleased
 
+### Pages that are not entries
+
+- A route with no entry behind it can say what an entry would have said, through the new `Seo` facade: `Seo::override([...])`, `->defaults()`, `->for($object)`, `->breadcrumbs()`, `->noindex()`, `->alternates()`, `->schema()`. Precedence runs override, the page's own fields, legacy handles, SEO Pro, defaults, settings. This replaces branching away from `{{ vulpo_seo }}` in a layout, which costs the page its Organization, WebSite, Twitter card, `og:site_name`, `og:locale` and verification tags.
+- `noindex_paths` in the settings, `seo-and-geo.robots.noindex_paths` in config and a `seo.noindex` middleware all keep a route out of the index. None of them add a robots.txt `Disallow`: a crawler has to be allowed to fetch a URL to read the instruction not to index it.
+- `og:type` can be set outright, for the values no `schema_type` maps onto.
+
+### Structured data
+
+- Nodes are emitted as one `@graph` and reference each other by `@id`, with a `WebPage` tying the page-level nodes to the site-level ones. `seo-and-geo.schema.graph` reverts to one `<script>` per node; `nodes()` still returns self-contained nodes, so anything built against it is unaffected.
+- Builders for a shop: `ProductNode`, `OfferNode`, `AggregateOfferNode`, `ItemListNode`, `CollectionPageNode`, `BreadcrumbListNode`, `FaqPageNode`, plus `ShippingDetails` and `ReturnPolicy`. Each drops itself when its minimum viable data is missing.
+- Values are validated and normalised on the way in — prices to a dot decimal, dates to ISO-8601, GTINs against their check digit. `seo-and-geo.schema.strict` turns a rejection into an exception, for a test suite.
+- A **Shop** settings tab holds the currency, return window and shipping rate, since those belong to the shop rather than to any one product. Offers pick them up without being asked.
+- `WebSite` gains a `potentialAction` SearchAction, from a `search_url` setting containing `{q}`.
+- FAQ rows stand alongside another page type instead of replacing it, and `seo_schema_custom` accepts a list of nodes.
+
+### Sitemap and llms.txt
+
+- Packages can register a `SitemapProvider` or an `LlmsProvider` to contribute URLs the addon cannot see — a product on a Laravel route, a listing from an API. They `yield`, and are only resolved when a file is actually being built.
+- A provider whose source is unreachable falls back to its last successful result, and the combined file is then cached for `retry_minutes` rather than the full hour. A sitemap that shrinks does not read as "the source is down", it reads as "these pages are gone".
+- `/llms-full.txt`, for a catalogue too long to belong in a file meant to be read whole. Entries fill the short file's budget first, and `max_per_group` stops one provider crowding out the rest.
+- `<image:image>` in the sitemap, from each page's sharing image.
+- `seo_sitemap_priority` and `seo_sitemap_changefreq` have fields at last. `Sitemap::url()` and `Fields::MAP` have always read them; nothing wrote them.
+
+### Fixed
+
+- `routes/web.php` read `config('seo.sitemap.*')`, `config('seo.robots.*')` and `config('seo.llms.*')`. The key is `seo-and-geo`, so every lookup missed and fell through to its default: a published config disabling or renaming a route was silently ignored. This is the same class of bug as the 1.4.0 fix — the rename to `seo-and-geo` reintroduced it. `resources/views/cp/ai-crawlers.blade.php` had it too, showing the default retention period rather than the configured one.
+- `Article.datePublished` and `Event.startDate`/`endDate` emitted the raw field string. `2026-09-01 19:00` is not a date-time schema.org accepts.
+- robots.txt advertised the sitemap on a site closed to search engines.
+- `Organization.logo` was a bare URL; it is an `ImageObject` when the asset can be measured.
+- `Article` gained `dateModified`.
+
+### Upgrading
+
+- Structured data is one `@graph` by default. Set `seo-and-geo.schema.graph` to `false` for the previous shape.
+- Your published config is now actually read. Check `sitemap.route`, `robots.route` and `llms.route` before deploying — a value that was being ignored will start applying.
+- The config file is `config/seo-and-geo.php` and the publish tag is `seo-and-geo-config`. The README said `config/seo.php` and `seo-config`, and had since 1.0.
+- Nothing written against `Schema::nodes()`, `Meta::tags()` or `Sitemap::urls()` changes shape.
+
 - The **SEO** entry in the control panel sidebar no longer doubles up: core's own entry for the addon, nested under Tools → Addons, is removed since this addon already links to the same settings screen.
 - Per-site overrides are a collapsible replicator rather than a stacked grid, so a site's seven fields fold away into one row.
 - Migrates from `statamic/seo-pro`: its per-entry `seo` array and its site defaults are translated to this addon's handles and settings, and are read at render time until you migrate. Values pointing at another field (`@seo:content/title`) and values containing Antlers are dropped rather than rendered literally.
