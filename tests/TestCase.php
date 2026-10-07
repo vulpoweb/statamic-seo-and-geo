@@ -24,6 +24,11 @@ abstract class TestCase extends AddonTestCase
         config()->set('seo-and-geo.sitemap.cache_minutes', 0);
         config()->set('seo-and-geo.llms.cache_minutes', 0);
 
+        // Strict everywhere in the suite: a value schema.org would reject is a
+        // failing test here, rather than a key that quietly goes missing from a
+        // rich result in production.
+        config()->set('seo-and-geo.schema.strict', true);
+
         // Lets the whole suite be run against database storage with
         // VULPO_SEO_STORAGE_DRIVER=eloquent, which is what CI does.
         if (app(StorageManager::class)->isEloquent()) {

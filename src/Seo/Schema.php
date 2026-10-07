@@ -6,6 +6,7 @@ use Statamic\Contracts\Entries\Entry as EntryContract;
 use Statamic\Facades\Entry;
 use Statamic\Facades\Site;
 use Statamic\Tags\Context;
+use Vulpo\Seo\Schema\Support\Normalize;
 use Vulpo\Seo\Support\Assets;
 use Vulpo\Seo\Support\Nominatim;
 use Vulpo\Seo\Support\Settings;
@@ -80,7 +81,7 @@ class Schema
             '@id' => $this->base().'/#organization',
             'name' => $name,
             'url' => $this->base().'/',
-            'logo' => Assets::url(Settings::get('logo')),
+            'logo' => $this->logo(),
             'description' => Settings::string('business_description'),
             'knowsAbout' => Settings::list('knows_about') ?: null,
             'areaServed' => Settings::string('area_served'),
@@ -250,7 +251,8 @@ class Schema
             'headline' => $this->values->string('article_headline') ?: $this->pageTitle(),
             'description' => $this->values->string('article_description'),
             'author' => $author ? ['@type' => 'Person', 'name' => $author] : null,
-            'datePublished' => $this->values->string('article_published'),
+            'datePublished' => Normalize::date($this->values->string('article_published')),
+            'dateModified' => Normalize::date($this->entry?->lastModified()),
             'image' => Assets::url($this->values->field('article_image') ?: $this->values->field('image')),
             'mainEntityOfPage' => $this->pageUrl(),
             'inLanguage' => $this->language(),
@@ -325,8 +327,8 @@ class Schema
             '@type' => 'Event',
             'name' => $this->values->string('event_name') ?: $this->pageTitle(),
             'description' => $this->values->string('event_description'),
-            'startDate' => $this->values->string('event_start'),
-            'endDate' => $this->values->string('event_end'),
+            'startDate' => Normalize::date($this->values->string('event_start')),
+            'endDate' => Normalize::date($this->values->string('event_end')),
             'url' => $this->values->string('event_url') ?: $this->pageUrl(),
             'image' => Assets::url($this->values->field('image')),
             'location' => ($location = $this->values->string('event_location'))
@@ -362,6 +364,35 @@ class Schema
         return array_key_exists('@context', $decoded)
             ? $decoded
             : array_merge(['@context' => 'https://schema.org'], $decoded);
+    }
+
+    /**
+     * Google's logo guidelines ask for dimensions, and an ImageObject is the
+     * only place to put them. Falls back to a bare URL when the value is not a
+     * resolvable asset -- a path typed into the settings, typically.
+     *
+     * @return array<string, mixed>|string|null
+     */
+    private function logo(): array|string|null
+    {
+        $value = Settings::get('logo');
+
+        if (! $url = Assets::url($value)) {
+            return null;
+        }
+
+        $asset = Assets::find($value);
+
+        if (! $asset || ! $asset->width()) {
+            return $url;
+        }
+
+        return [
+            '@type' => 'ImageObject',
+            'url' => $url,
+            'width' => $asset->width(),
+            'height' => $asset->height(),
+        ];
     }
 
     /**

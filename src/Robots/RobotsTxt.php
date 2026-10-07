@@ -13,13 +13,15 @@ class RobotsTxt
 {
     public function render(): string
     {
+        $closed = Settings::bool('noindex_site');
+
         $lines = ['User-agent: *'];
 
         foreach ($this->disallowedPaths() as $path) {
             $lines[] = 'Disallow: '.$path;
         }
 
-        if (Settings::bool('noindex_site')) {
+        if ($closed) {
             $lines = ['User-agent: *', 'Disallow: /'];
         }
 
@@ -30,7 +32,10 @@ class RobotsTxt
             $lines = array_merge($lines, preg_split('/\R/', $extra) ?: []);
         }
 
-        if (config('seo-and-geo.sitemap.enabled', true) && Settings::bool('sitemap_enabled', true)) {
+        // A closed site has nothing to offer a crawler, and pointing one at a
+        // sitemap it is forbidden to read is a contradiction it may resolve the
+        // wrong way round.
+        if (! $closed && config('seo-and-geo.sitemap.enabled', true) && Settings::bool('sitemap_enabled', true)) {
             $lines[] = '';
             $lines[] = 'Sitemap: '.$this->sitemapUrl();
         }

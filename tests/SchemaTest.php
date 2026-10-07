@@ -139,7 +139,7 @@ it('outputs an event node', function () {
 
     expect($event['@type'])->toBe('Event');
     expect($event['name'])->toBe('Laravel meetup');
-    expect($event['startDate'])->toBe('2026-09-01 19:00');
+    expect($event['startDate'])->toStartWith('2026-09-01T19:00:00');
     expect($event['location'])->toBe(['@type' => 'Place', 'name' => 'Ghent']);
 });
 

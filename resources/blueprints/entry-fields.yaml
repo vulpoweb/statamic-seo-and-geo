@@ -63,6 +63,35 @@ tabs:
               display: 'Leave out of the sitemap'
               default: false
               width: 50
+          -
+            handle: seo_sitemap_priority
+            field:
+              type: select
+              display: 'Sitemap priority'
+              instructions: 'How this page ranks against the rest of the site. Leave empty for the site default.'
+              clearable: true
+              width: 50
+              options:
+                '1.0': 'Highest (1.0)'
+                '0.8': 'High (0.8)'
+                '0.5': 'Normal (0.5)'
+                '0.3': 'Low (0.3)'
+          -
+            handle: seo_sitemap_changefreq
+            field:
+              type: select
+              display: 'How often it changes'
+              instructions: 'A hint, not a promise. Leave empty for the site default.'
+              clearable: true
+              width: 50
+              options:
+                always: Always
+                hourly: Hourly
+                daily: Daily
+                weekly: Weekly
+                monthly: Monthly
+                yearly: Yearly
+                never: Never
   vulpo_seo_schema:
     display: 'Structured data'
     icon: code

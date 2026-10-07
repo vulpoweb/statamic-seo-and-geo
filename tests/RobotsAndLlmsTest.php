@@ -26,6 +26,14 @@ it('blocks everything when the site is hidden from search engines', function () 
     expect((new RobotsTxt)->render())->toContain("User-agent: *\nDisallow: /");
 });
 
+it('offers no sitemap on a site it has just closed', function () {
+    // Advertising a sitemap while forbidding every URL in it is a contradiction,
+    // and not one you want a crawler resolving in your favour.
+    Settings::swap(['noindex_site' => true]);
+
+    expect((new RobotsTxt)->render())->not->toContain('Sitemap:');
+});
+
 it('blocks all AI crawlers on request', function () {
     Settings::swap(['ai_crawler_policy' => 'block']);
 

@@ -30,7 +30,7 @@
                 @endforeach
             </div>
 
-            <ui-card-panel heading="{{ __('Visits') }}" subheading="{{ __('Grouped per crawler per day. Kept for :days days.', ['days' => config('seo.ai_crawlers.retention_days', 30)]) }}">
+            <ui-card-panel heading="{{ __('Visits') }}" subheading="{{ __('Grouped per crawler per day. Kept for :days days.', ['days' => config('seo-and-geo.ai_crawlers.retention_days', 30)]) }}">
                 <ui-table>
                     <ui-table-columns>
                         <ui-table-column>{{ __('Date') }}</ui-table-column>
