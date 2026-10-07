@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Vulpo\Seo\Http\Controllers\LlmsController;
+use Vulpo\Seo\Http\Controllers\LlmsFullController;
 use Vulpo\Seo\Http\Controllers\RobotsController;
 use Vulpo\Seo\Http\Controllers\SitemapController;
 
@@ -30,4 +31,11 @@ if (config('seo-and-geo.robots.enabled', true)) {
 if (config('seo-and-geo.llms.enabled', true)) {
     Route::get(config('seo-and-geo.llms.route', 'llms.txt'), LlmsController::class)
         ->name('vulpo-seo.llms');
+
+    // The unabridged companion, for a catalogue too long to belong in a file
+    // meant to be read whole.
+    if (config('seo-and-geo.llms.full_enabled', true)) {
+        Route::get(config('seo-and-geo.llms.full_route', 'llms-full.txt'), LlmsFullController::class)
+            ->name('vulpo-seo.llms.full');
+    }
 }
