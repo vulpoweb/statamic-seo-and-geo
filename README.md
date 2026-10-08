@@ -371,6 +371,11 @@ one line rather than a trip to the Actions tab.
 Nothing is tagged until the tests pass, and re-running is safe: a tag that
 already exists is a no-op.
 
+If Packagist ever falls behind — it will tell you by not having the version —
+run **Update Packagist** from the Actions tab. It needs `PACKAGIST_USERNAME`
+and `PACKAGIST_TOKEN`, which are organisation secrets rather than repository
+ones.
+
 ## Credits
 
 Built by [Vulpo](https://vulpo.be).

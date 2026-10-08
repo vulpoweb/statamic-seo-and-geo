@@ -125,3 +125,19 @@ jobs:
           gh release create "v${{ steps.changelog.outputs.version }}" \
             --title "v${{ steps.changelog.outputs.version }}" \
             --notes-file /tmp/notes.md
+
+      # Here rather than letting packagist.yml catch the tag: a push made with
+      # the default GITHUB_TOKEN does not trigger other workflows, so that one
+      # never fires for a release cut by this one. v2.0.0 reached GitHub and
+      # not Packagist exactly that way.
+      - name: Tell Packagist
+        if: steps.changelog.outputs.release == 'true'
+        run: |
+          if [ -z "${{ secrets.PACKAGIST_USERNAME }}" ] || [ -z "${{ secrets.PACKAGIST_TOKEN }}" ]; then
+            echo "::error::PACKAGIST_USERNAME or PACKAGIST_TOKEN is missing, so the release is on GitHub but not on Packagist. Set them, then run the 'Update Packagist' workflow by hand."
+            exit 1
+          fi
+
+          curl -sS --fail-with-body -XPOST -H'content-type:application/json' \
+            "https://packagist.org/api/update-package?username=${{ secrets.PACKAGIST_USERNAME }}&apiToken=${{ secrets.PACKAGIST_TOKEN }}" \
+            -d '{"repository":{"url":"https://github.com/${{ github.repository }}"}}'
