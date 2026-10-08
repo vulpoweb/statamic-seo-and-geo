@@ -344,17 +344,23 @@ composer test
 
 ## Releasing
 
-Write the release notes under `## Unreleased` in `CHANGELOG.md` as you go, then
-run the **Release** workflow from the Actions tab and give it a version.
+Releasing is merging.
 
-It runs the suite and the linter, renames the `## Unreleased` heading to the
-version and today's date, commits that, tags `vX.Y.Z`, and creates the GitHub
-release using those same notes as its body. Packagist picks the tag up on its
-own.
+Write the release notes under `## Unreleased` in `CHANGELOG.md` as you go. When
+it is time to ship, open a pull request that renames that heading to the
+version — `## 2.0.0`, or `## 2.0.0 - 2026-10-08` — and add a fresh
+`## Unreleased` above it. Merging that pull request runs the suite, tags
+`vX.Y.Z`, and creates the GitHub release using those notes as its body.
+Packagist picks the tag up on its own.
 
-The version is typed in rather than inferred, because whether something is a
-minor or a patch is a judgement a commit log cannot make for you. Nothing is
-written until the tests pass, so a failed run leaves no half-made release.
+An ordinary merge releases nothing: the workflow only acts once the changelog
+opens with a version rather than `## Unreleased`. That keeps the question of
+whether something is a major, a minor or a patch where it belongs — with a
+person, in a diff somebody reviews — while costing one line rather than a trip
+to the Actions tab.
+
+Nothing is tagged until the tests pass, and re-running is safe: a tag that
+already exists is a no-op.
 
 ## Credits
 
