@@ -1,5 +1,9 @@
 name: Update Packagist
 
+# The release workflow notifies Packagist itself, because a tag it pushed with
+# GITHUB_TOKEN would not trigger this one. This stays for the two cases that
+# are not a release: a tag pushed by hand, and re-syncing after the API was
+# down or a token had expired.
 on:
   push:
     tags: ['v*']
