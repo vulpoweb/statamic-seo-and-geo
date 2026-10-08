@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.0.0
+
 ### Pages that are not entries
 
 - A route with no entry behind it can say what an entry would have said, through the new `Seo` facade: `Seo::override([...])`, `->defaults()`, `->for($object)`, `->breadcrumbs()`, `->noindex()`, `->alternates()`, `->schema()`. Precedence runs override, the page's own fields, legacy handles, SEO Pro, defaults, settings. This replaces branching away from `{{ vulpo_seo }}` in a layout, which costs the page its Organization, WebSite, Twitter card, `og:site_name`, `og:locale` and verification tags.
