@@ -35,22 +35,28 @@ jobs:
       - name: Read the version off the top of the changelog
         id: changelog
         run: |
-          heading=$(awk '/^## /{ sub(/^## /, ""); print; exit }' CHANGELOG.md)
+          # The newest heading that names a version. '## Unreleased' is skipped
+          # rather than read as a stop sign, so it can sit at the top of the
+          # file permanently the way Keep a Changelog has it -- otherwise a
+          # standing Unreleased section would mean nothing ever releases.
+          heading=$(awk '
+            /^## / {
+              h = $0
+              sub(/^## /, "", h)
+              split(h, parts, " ")
+              if (parts[1] ~ /^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$/) { print h; exit }
+            }
+          ' CHANGELOG.md)
+
           version=$(echo "$heading" | awk '{print $1}')
 
-          echo "Top heading: '$heading'"
-
-          # Still accumulating notes. Nothing to do, and not an error.
-          if [ "$version" = "Unreleased" ] || [ -z "$version" ]; then
-            echo "Nothing to release: the changelog still opens with '## Unreleased'."
+          if [ -z "$version" ]; then
+            echo "Nothing to release: no '## <version>' heading in the changelog yet."
             echo "release=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
-            echo "::error::'$version' is not a version. Use '## 2.0.0', or '## 2.0.0 - 2026-10-08'."
-            exit 1
-          fi
+          echo "Newest version heading: '$heading'"
 
           # Idempotent: an edit to an older entry re-runs this and finds the
           # tag already made.
@@ -62,10 +68,10 @@ jobs:
 
           # The notes are the changelog's own prose. A generated list of commit
           # subjects would describe the same release worse.
-          awk '
+          awk -v want="## $heading" '
             seen && /^## / { exit }
-            seen            { print }
-            /^## /          { seen = 1 }
+            seen           { print }
+            $0 == want     { seen = 1 }
           ' CHANGELOG.md | sed '/./,$!d' > /tmp/notes.md
 
           if [ ! -s /tmp/notes.md ]; then
