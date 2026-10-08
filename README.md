@@ -342,6 +342,20 @@ composer install
 composer test
 ```
 
+## Releasing
+
+Write the release notes under `## Unreleased` in `CHANGELOG.md` as you go, then
+run the **Release** workflow from the Actions tab and give it a version.
+
+It runs the suite and the linter, renames the `## Unreleased` heading to the
+version and today's date, commits that, tags `vX.Y.Z`, and creates the GitHub
+release using those same notes as its body. Packagist picks the tag up on its
+own.
+
+The version is typed in rather than inferred, because whether something is a
+minor or a patch is a judgement a commit log cannot make for you. Nothing is
+written until the tests pass, so a failed run leaves no half-made release.
+
 ## Credits
 
 Built by [Vulpo](https://vulpo.be).
