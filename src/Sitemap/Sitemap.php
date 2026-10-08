@@ -9,6 +9,8 @@ use Statamic\Facades\Entry;
 use Statamic\Facades\Site;
 use Statamic\Facades\Taxonomy;
 use Statamic\Facades\Term;
+use Vulpo\Seo\Support\Assets;
+use Vulpo\Seo\Support\ProviderResults;
 use Vulpo\Seo\Support\Router;
 use Vulpo\Seo\Support\Settings;
 use Vulpo\Seo\Support\ValueReader;
@@ -33,8 +35,26 @@ class Sitemap
 
     public static function flushCache(): void
     {
+        $registry = app('vulpo-seo.providers.sitemap');
+
         foreach (Site::all() as $site) {
             Cache::forget(self::CACHE_KEY.':'.$site->handle());
+
+            // The working copies, not the last-good ones: saving a page must
+            // not throw away what keeps the sitemap whole when an API is down.
+            ProviderResults::forgetAll(self::CACHE_KEY, $site->handle(), $registry);
+        }
+    }
+
+    /**
+     * Drop one provider's slice, for a package invalidating its own data from
+     * its own webhook.
+     */
+    public static function flushProvider(string $key): void
+    {
+        foreach (Site::all() as $site) {
+            Cache::forget(self::CACHE_KEY.':'.$site->handle());
+            ProviderResults::forget(self::CACHE_KEY, $site->handle(), $key);
         }
     }
 
@@ -75,19 +95,62 @@ class Sitemap
             return $this->buildUrls();
         }
 
-        return Cache::remember(
+        if (is_array($cached = Cache::get(self::CACHE_KEY.':'.$this->site))) {
+            return $cached;
+        }
+
+        $results = $this->providerResults();
+        $urls = $this->buildUrls($results);
+
+        // A build that fell back to a provider's last known answer is cached
+        // for minutes rather than an hour, so the sitemap repairs itself
+        // shortly after the source recovers.
+        Cache::put(
             self::CACHE_KEY.':'.$this->site,
-            now()->addMinutes($minutes),
-            fn () => $this->buildUrls(),
+            $urls,
+            now()->addMinutes($results->ttlMinutes($minutes)),
+        );
+
+        return $urls;
+    }
+
+    /**
+     * URLs from packages that serve pages the addon cannot see: a product on a
+     * Laravel route, a listing generated from an API.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function providerUrls(ProviderResults $results): array
+    {
+        return array_values(array_map(
+            fn (SitemapUrl $url) => $url->toArray(),
+            array_filter(
+                $results->collect(fn (object $provider, string $site) => $provider->sitemapUrls($site)),
+                fn (mixed $url) => $url instanceof SitemapUrl,
+            ),
+        ));
+    }
+
+    private function providerResults(): ProviderResults
+    {
+        return new ProviderResults(
+            app('vulpo-seo.providers.sitemap'),
+            self::CACHE_KEY,
+            'sitemap',
+            $this->site,
         );
     }
 
     /**
      * @return array<int, array{loc: string, lastmod: string|null, changefreq: string|null, priority: string|null}>
      */
-    private function buildUrls(): array
+    private function buildUrls(?ProviderResults $results = null): array
     {
-        $urls = array_merge($this->entryUrls(), $this->termUrls());
+        $urls = array_merge(
+            $this->entryUrls(),
+            $this->termUrls(),
+            $this->providerUrls($results ?? $this->providerResults()),
+        );
 
         $unique = [];
 
@@ -187,7 +250,30 @@ class Sitemap
             'priority' => $values->string('sitemap_priority')
                 ?: Settings::string('sitemap_priority'),
             'alternates' => $this->alternates($data),
+            'images' => $this->images($values),
         ];
+    }
+
+    /**
+     * The page's own images, so Google Images has something to find.
+     *
+     * @return array<int, array{loc: string, title: string|null, caption: string|null}>
+     */
+    private function images(ValueReader $values): array
+    {
+        if (! Settings::bool('sitemap_images', true)) {
+            return [];
+        }
+
+        $images = [];
+
+        foreach ((array) config('seo-and-geo.sitemap.image_fields', ['seo_image']) as $field) {
+            if ($url = Assets::url($values->handle((string) $field))) {
+                $images[] = ['loc' => $url, 'title' => null, 'caption' => null];
+            }
+        }
+
+        return $images;
     }
 
     /**

@@ -105,10 +105,10 @@ Columns are `from,to,status,site`. A header row is optional, and `source`/`desti
 
 ## Configuration
 
-Editor-facing options live in the control panel. Developer options live in `config/seo.php`: routes, caching, field injection, and the AI crawler list. Statamic derives the name from the package, so the config key is `seo`.
+Editor-facing options live in the control panel. Developer options live in `config/seo-and-geo.php`: routes, caching, field injection, structured data, and the AI crawler list. Statamic derives the slug from the package name, so the config key is `seo-and-geo`.
 
 ```bash
-php artisan vendor:publish --tag=seo-config
+php artisan vendor:publish --tag=seo-and-geo-config
 ```
 
 To customise the injected fields:
@@ -136,7 +136,7 @@ Flat file by default:
 
 | What | Where |
 | --- | --- |
-| Settings | `resources/addons/seo.yaml` |
+| Settings | `resources/addons/seo-and-geo.yaml` |
 | Redirects | `content/vulpo-seo/redirects.yaml` |
 | 404 log, AI crawler log, URL index | `storage/app/vulpo-seo/` |
 
@@ -174,7 +174,7 @@ change. Re-running it updates rather than duplicating.
 Override the detection when you want to decide yourself:
 
 ```php
-// config/seo.php
+// config/seo-and-geo.php
 'storage' => [
     'driver' => 'file', // or 'eloquent', default 'auto'
 ],
@@ -196,8 +196,8 @@ the same block.
   Then run `herd restart nginx`. Herd regenerates that file when the site is re-secured, so the edit may need repeating.
 - Automatic redirects react to entry saves. Statamic rewrites child URLs without saving each child, which is why a parent change also adds a `parent/*` wildcard rule.
 - Control panel screens use Statamic's own UI components. Every export of the CP's `@ui` package is registered globally as a `ui-<kebab-name>` Vue component, and the CP compiles a Blade view's output as an in-DOM template. So `<ui-card-panel>`, `<ui-table>`, and friends work straight from Blade and the screens match the CP. Two things not to try instead: a `<style>` block in a CP view (the Vue app drops it) and Tailwind variants the CP bundle never compiled (`sm:grid-cols-2` and the like are absent, plain utilities are fine).
-- The config file is `config/seo.php`, not `config/vulpo-seo.php`. Statamic derives an addon's slug from the package name, and a custom `extra.statamic.slug` breaks core's settings lookup: settings are written to `resources/addons/{slug}.yaml` but read from `resources/addons/{package-name}.yaml`.
-- Canonical URLs drop the query string, except the pagination parameter. `?page=2` points at itself, so page 2 is not read as a duplicate of page 1. `seo.canonical.trailing_slash` forces a trailing slash on or off. Null leaves URLs alone.
+- The config file is `config/seo-and-geo.php`, not `config/vulpo-seo.php`. Statamic derives an addon's slug from the package name, and a custom `extra.statamic.slug` breaks core's settings lookup: settings are written to `resources/addons/{slug}.yaml` but read from `resources/addons/{package-name}.yaml`.
+- Canonical URLs drop the query string, except the pagination parameter. `?page=2` points at itself, so page 2 is not read as a duplicate of page 1. `seo-and-geo.canonical.trailing_slash` forces a trailing slash on or off. Null leaves URLs alone.
 - Entries that only redirect are left out of the sitemap and llms.txt. This covers Statamic's `redirect` field, including `redirect: 404`. Their `absoluteUrl()` returns the destination, so listing them would advertise another page's URL as one of yours.
 - `/sitemap.xml`, `/robots.txt`, and `/llms.txt` send `Cache-Control` built from their `cache_minutes` config, with `stale-while-revalidate` so a CDN never makes a crawler wait for a rebuild. Setting `cache_minutes` to 0 sends `no-store`.
 - The redirects screen is a grid holding every rule at once. It is comfortable into the hundreds. Past that, edit `content/vulpo-seo/redirects.yaml` (or the table) directly and use the CSV import for bulk work.
@@ -220,11 +220,120 @@ php artisan vendor:publish --tag=vulpo-seo-translations
 
 A role with only the view permission sees the data and no write controls.
 
+## Pages that are not entries
+
+The addon reads a page's SEO off the entry behind it. A route with no entry --
+a product served from an API, a search results page -- can say the same things
+through the `Seo` facade, and the layout keeps calling `{{ vulpo_seo }}`
+unconditionally.
+
+```php
+use Vulpo\Seo\Facades\Seo;
+use Vulpo\Seo\Schema\Nodes\{ProductNode, OfferNode};
+
+Seo::override([
+        'title'       => $product->name,
+        'description' => $product->excerpt,
+        'canonical'   => route('shop.product', $product->slug),
+        'image'       => $product->cover,
+        'og_type'     => 'product',
+        'noindex'     => $product->hidden,
+    ])
+    ->breadcrumbs([
+        ['name' => 'Badkamer', 'url' => '/badkamer'],
+        ['name' => $product->name],   // the last crumb is the page you are on
+    ])
+    ->schema(
+        ProductNode::make($product->name)
+            ->gtin($product->ean)
+            ->brand($product->brand)
+            ->image($product->images)
+            ->condition('new')
+            ->offer(OfferNode::fromMinorUnits($product->priceCents)->availability('in_stock')),
+    );
+```
+
+Precedence, highest first: `Seo::override()`, the page's own fields, legacy
+handles, SEO Pro's `seo` array, `Seo::defaults()`, the control panel settings.
+
+Don't branch away from `{{ vulpo_seo }}` to hand-write a head. That is what the
+facade replaces, and the branch costs the page its Organization, its WebSite,
+the Twitter card, `og:site_name`, `og:locale` and every verification tag.
+
+`Seo::for($object)` is the same thing for a class implementing `ProvidesSeo`.
+`Seo::noindex()` and the `seo.noindex` middleware keep a route out of the index;
+`noindex_paths` in the settings does it by path pattern. None of them add a
+robots.txt `Disallow`, deliberately: a crawler has to be allowed to fetch a URL
+in order to read the instruction not to index it.
+
+### Structured data
+
+Nodes go out as a single `@graph` so they can reference each other by `@id`.
+`seo-and-geo.schema.graph` reverts to one `<script>` per node.
+
+Builders available: `ProductNode`, `OfferNode`, `AggregateOfferNode`,
+`ItemListNode`, `CollectionPageNode`, `BreadcrumbListNode`, `FaqPageNode`, plus
+`ShippingDetails` and `ReturnPolicy`. Each returns nothing at all when its
+minimum viable data is missing -- an invalid node costs the page its whole rich
+result, an absent one costs only itself.
+
+Values are validated on the way in: prices normalise to a dot decimal, dates to
+ISO-8601, GTINs are checked against their check digit. A value schema.org would
+reject is dropped. Set `seo-and-geo.schema.strict` (or `VULPO_SEO_SCHEMA_STRICT`)
+in your test suite to have it throw instead, so a malformed price fails CI
+rather than a product page.
+
+Shipping and returns come from the **Shop** settings tab unless an offer says
+otherwise, since they are facts about the shop rather than about one product.
+
+### Contributing URLs to the sitemap and llms.txt
+
+The addon can only see entries and terms. Anything else a site serves has to
+say so:
+
+```php
+use Vulpo\Seo\Contracts\SitemapProvider;
+use Vulpo\Seo\Sitemap\SitemapUrl;
+
+class ProductSitemapProvider implements SitemapProvider
+{
+    public function sitemapUrls(string $site): iterable
+    {
+        foreach ($this->products->cursor() as $product) {
+            yield SitemapUrl::make(route('shop.product', $product->slug))
+                ->lastmod($product->updatedAt)
+                ->image($product->cover);
+        }
+    }
+}
+
+// In your service provider's boot():
+Seo::sitemap()->register(ProductSitemapProvider::class);
+Seo::llms()->register(ProductLlmsProvider::class);
+```
+
+Register by class string; it doubles as the cache key and keeps a package that
+registers twice from counting twice. Providers `yield`, so a paginated API does
+not have to be buffered, and they are only resolved when something is actually
+being built.
+
+When a provider throws, its last successful result is served instead and the
+combined file is cached for `retry_minutes` rather than the full hour. This is
+deliberate: a sitemap that shrinks does not read as "the source is down", it
+reads as "these pages are gone".
+
+Implement `LlmsFullProvider` as well to list more in `/llms-full.txt` than
+belongs in `/llms.txt`. The short file is meant to be read whole, so entries
+fill its budget first and no single heading may crowd out the rest.
+
+`Sitemap::flushProvider($key)` and `LlmsTxt::flushProvider($key)` invalidate one
+provider's slice, for a package with its own webhook.
+
 ## Extending
 
 The preview field is a normal fieldtype. You can move it, drop it, or add it to a blueprint of your own by publishing the blueprints and editing them.
 
-The control panel script is buildless on purpose. `resources/js/cp.js` registers the preview component through the globals Statamic exposes (`window.Statamic.$components`, `window.Vue`, `window.__STATAMIC__`). That means there is no npm dependency, no Vite config, and no bundle to rebuild when Statamic ships a new minor version. Because addon scripts load before the control panel's own modules, the script waits for `window.Statamic` to appear rather than assuming it is there. It is published to `public/vendor/seo/js/` by `php please statamic:install` or `php artisan vendor:publish --tag=seo --force`.
+The control panel script is buildless on purpose. `resources/js/cp.js` registers the preview component through the globals Statamic exposes (`window.Statamic.$components`, `window.Vue`, `window.__STATAMIC__`). That means there is no npm dependency, no Vite config, and no bundle to rebuild when Statamic ships a new minor version. Because addon scripts load before the control panel's own modules, the script waits for `window.Statamic` to appear rather than assuming it is there. It is published to `public/vendor/seo-and-geo/js/` by `php please statamic:install` or `php artisan vendor:publish --tag=seo-and-geo --force`.
 
 ## Testing
 

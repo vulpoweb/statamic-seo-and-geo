@@ -65,6 +65,22 @@ return [
         'cache_minutes' => 60,
         // Maximum number of URLs in a single sitemap file. Google's limit is 50.000.
         'max_urls' => 5000,
+        // Entry fields to pull <image:image> entries from. Empty to omit them.
+        'image_fields' => ['seo_image'],
+        /*
+         * How a registered provider behaves when its source is unreachable.
+         *
+         * A sitemap that shrinks is worse than one that is stale: the missing
+         * URLs read as "these pages are gone". So the last list a provider
+         * built successfully is kept well past its normal cache, and a build
+         * that had to fall back is only cached for retry_minutes, so the
+         * sitemap repairs itself minutes after the source comes back rather
+         * than at the end of the hour.
+         */
+        'provider_fallback_hours' => 24,
+        'retry_minutes' => 5,
+        // A ceiling, so a runaway source cannot exhaust memory mid-request.
+        'max_provider_urls' => 50000,
     ],
 
     /*
@@ -126,6 +142,16 @@ return [
         'enabled' => true,
         'route' => 'robots.txt',
         'cache_minutes' => 60,
+        /*
+         * Paths to mark noindex, as request()->is() patterns. The code-level
+         * complement to the same setting in the control panel; the two are
+         * unioned, so a developer and an editor cannot overwrite each other.
+         *
+         * Note this is noindex, not Disallow. Disallowing a URL stops a crawler
+         * reading the noindex on it, which leaves it in the index as a bare
+         * address forever.
+         */
+        'noindex_paths' => [],
     ],
 
     /*
@@ -143,6 +169,19 @@ return [
         'route' => 'llms.txt',
         'cache_minutes' => 60,
         'max_urls' => 200,
+        /*
+         * llms.txt is a map, not an inventory: it is meant to be read whole, so
+         * it stays short and curated. llms-full.txt is the unabridged companion
+         * for anything a provider wants to list in full -- a product catalogue,
+         * typically -- and is capped separately.
+         */
+        'full_enabled' => true,
+        'full_route' => 'llms-full.txt',
+        'full_max_urls' => 20000,
+        // Per heading, so one large provider cannot crowd out the pages.
+        'max_per_group' => 50,
+        'provider_fallback_hours' => 24,
+        'retry_minutes' => 5,
     ],
 
     /*
@@ -210,5 +249,26 @@ return [
     */
 
     'legacy_fallbacks' => true,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Structured data
+    |--------------------------------------------------------------------------
+    |
+    | Every node is emitted in one @graph so they can reference each other by
+    | @id -- the WebPage points at the WebSite, the Product at the Organization
+    | selling it. Turn `graph` off to go back to one <script> per node.
+    |
+    | `strict` turns a value schema.org would reject into an exception instead
+    | of a dropped key. Keep it on locally and in your tests, off in production:
+    | a malformed price should fail a build, not a product page.
+    |
+    */
+
+    'schema' => [
+        'graph' => true,
+        'webpage' => true,
+        'strict' => env('VULPO_SEO_SCHEMA_STRICT', false),
+    ],
 
 ];

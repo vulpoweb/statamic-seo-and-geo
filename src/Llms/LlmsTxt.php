@@ -6,6 +6,8 @@ use Illuminate\Support\Facades\Cache;
 use Statamic\Facades\Collection as CollectionFacade;
 use Statamic\Facades\Entry;
 use Statamic\Facades\Site;
+use Vulpo\Seo\Contracts\LlmsFullProvider;
+use Vulpo\Seo\Support\ProviderResults;
 use Vulpo\Seo\Support\Router;
 use Vulpo\Seo\Support\Settings;
 use Vulpo\Seo\Support\ValueReader;
@@ -28,23 +30,93 @@ class LlmsTxt
 
     public static function flushCache(): void
     {
+        $registry = app('vulpo-seo.providers.llms');
+
         foreach (Site::all() as $site) {
             Cache::forget(self::CACHE_KEY.':'.$site->handle());
+            Cache::forget(self::CACHE_KEY.':full:'.$site->handle());
+
+            // Not the last-good copies: those are what keep the file whole
+            // while a source is unreachable.
+            ProviderResults::forgetAll(self::CACHE_KEY, $site->handle(), $registry);
+            ProviderResults::forgetAll(self::CACHE_KEY.':full', $site->handle(), $registry);
+        }
+    }
+
+    public static function flushProvider(string $key): void
+    {
+        foreach (Site::all() as $site) {
+            Cache::forget(self::CACHE_KEY.':'.$site->handle());
+            Cache::forget(self::CACHE_KEY.':full:'.$site->handle());
+            ProviderResults::forget(self::CACHE_KEY, $site->handle(), $key);
+            ProviderResults::forget(self::CACHE_KEY.':full', $site->handle(), $key);
         }
     }
 
     public function render(): string
     {
+        return $this->cached(
+            self::CACHE_KEY.':'.$this->site,
+            fn (ProviderResults $r) => $this->build($r, full: false),
+            full: false,
+        );
+    }
+
+    /**
+     * The unabridged companion.
+     *
+     * llms.txt is meant to be read whole, so it stays a short curated map. A
+     * catalogue of thousands of products belongs here instead, where nothing is
+     * competing with it for a reader's attention or for the 200-link budget.
+     */
+    public function renderFull(): string
+    {
+        return $this->cached(
+            self::CACHE_KEY.':full:'.$this->site,
+            fn (ProviderResults $r) => $this->build($r, full: true),
+            full: true,
+        );
+    }
+
+    /**
+     * @param  \Closure(ProviderResults): string  $build
+     */
+    private function cached(string $key, \Closure $build, bool $full): string
+    {
         $minutes = (int) config('seo-and-geo.llms.cache_minutes', 60);
 
         if ($minutes < 1) {
-            return $this->build();
+            return $build($this->providerResults($full));
         }
 
-        return Cache::remember(self::CACHE_KEY.':'.$this->site, now()->addMinutes($minutes), fn () => $this->build());
+        if (is_string($cached = Cache::get($key))) {
+            return $cached;
+        }
+
+        $results = $this->providerResults($full);
+        $rendered = $build($results);
+
+        Cache::put($key, $rendered, now()->addMinutes($results->ttlMinutes($minutes)));
+
+        return $rendered;
     }
 
-    private function build(): string
+    /**
+     * The two files ask a provider different questions, so they cannot share a
+     * cache entry -- llms.txt would otherwise answer llms-full.txt with its
+     * own short list, and nobody would be any the wiser.
+     */
+    private function providerResults(bool $full): ProviderResults
+    {
+        return new ProviderResults(
+            app('vulpo-seo.providers.llms'),
+            self::CACHE_KEY.($full ? ':full' : ''),
+            'llms',
+            $this->site,
+        );
+    }
+
+    private function build(ProviderResults $results, bool $full): string
     {
         $name = Settings::string('business_name')
             ?: Settings::string('site_name')
@@ -72,7 +144,13 @@ class LlmsTxt
             }
         }
 
-        foreach ($this->pagesByCollection() as $title => $pages) {
+        $groups = $this->pagesByCollection();
+
+        foreach ($this->providerGroups($results, $full, array_sum(array_map('count', $groups))) as $heading => $links) {
+            $groups[$heading] = array_merge($groups[$heading] ?? [], $links);
+        }
+
+        foreach ($groups as $title => $pages) {
             $lines[] = '';
             $lines[] = '## '.$title;
             $lines[] = '';
@@ -85,6 +163,56 @@ class LlmsTxt
         }
 
         return implode("\n", $lines)."\n";
+    }
+
+    /**
+     * Links contributed by other packages, grouped under their own headings.
+     *
+     * Entries fill the budget first, so adding a product catalogue can never
+     * push the shop's own pages out of its llms.txt.
+     *
+     * @return array<string, array<int, array{title: string, url: string, description: string|null}>>
+     */
+    private function providerGroups(ProviderResults $results, bool $full, int $alreadyListed): array
+    {
+        $budget = ($full
+            ? (int) config('seo-and-geo.llms.full_max_urls', 20000)
+            : (int) config('seo-and-geo.llms.max_urls', 200)) - $alreadyListed;
+
+        if ($budget < 1) {
+            return [];
+        }
+
+        $perGroup = $full ? PHP_INT_MAX : max(1, (int) config('seo-and-geo.llms.max_per_group', 50));
+        $default = Settings::string('llms_default_group') ?: 'Pages';
+
+        $links = $results->collect(fn (object $provider, string $site) => $full && $provider instanceof LlmsFullProvider
+            ? $provider->llmsFullLinks($site)
+            : $provider->llmsLinks($site));
+
+        $grouped = [];
+
+        foreach ($links as $link) {
+            if (! $link instanceof LlmsLink || $budget < 1) {
+                continue;
+            }
+
+            $heading = $this->oneLine($link->group ?? $default);
+
+            if (count($grouped[$heading] ?? []) >= $perGroup) {
+                continue;
+            }
+
+            $grouped[$heading][] = [
+                'title' => $this->oneLine($link->title),
+                'url' => $link->url,
+                'description' => $link->description === null ? null : $this->oneLine($link->description),
+            ];
+
+            $budget--;
+        }
+
+        return $grouped;
     }
 
     /**

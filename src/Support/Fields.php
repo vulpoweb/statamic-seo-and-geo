@@ -21,6 +21,11 @@ class Fields
         'noindex' => ['seo_noindex', 'alt_seo_noindex'],
         'nofollow' => ['seo_nofollow', 'alt_seo_nofollow'],
         'image' => ['seo_image', 'alt_seo_og_image', 'alt_social_image'],
+        // No field writes these two: they exist so a route can set them through
+        // Seo::override(), and so ValueReader has a handle to look for if a
+        // project ever adds one to its own blueprint.
+        'og_type' => ['seo_og_type'],
+        'locale' => ['seo_locale'],
         'sitemap_exclude' => ['seo_sitemap_exclude', 'alt_sitemap_exclude'],
         'sitemap_priority' => ['seo_sitemap_priority', 'alt_sitemap_priority'],
         'sitemap_changefreq' => ['seo_sitemap_changefreq', 'alt_sitemap_changefreq'],
@@ -58,7 +63,10 @@ class Fields
      */
     public static function handle(string $key): string
     {
-        return self::MAP[$key][0];
+        // A key with no entry is one the overlay invented, not a typo: fall
+        // back to a handle in this addon's own shape rather than erroring, so
+        // adding a route-only value never means touching this map.
+        return self::MAP[$key][0] ?? 'seo_'.$key;
     }
 
     /**

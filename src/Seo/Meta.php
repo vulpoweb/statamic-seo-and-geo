@@ -24,14 +24,20 @@ class Meta
         private readonly ValueReader $values,
         private readonly ?EntryContract $entry = null,
         private readonly ?string $contextTitle = null,
+        private readonly ?SeoOverlay $overlay = null,
     ) {}
 
-    public static function forContext(Context $context): self
+    public static function forContext(Context $context, ?SeoOverlay $overlay = null): self
     {
+        $overlay ??= app(SeoOverlay::class);
+
         return new self(
-            values: ValueReader::fromContext($context),
+            values: ValueReader::fromContext($context)
+                ->withOverrides($overlay->overrides())
+                ->withDefaults($overlay->defaultValues()),
             entry: self::entryFromContext($context),
             contextTitle: is_scalar($title = $context->raw('title')) ? (string) $title : null,
+            overlay: $overlay,
         );
     }
 
@@ -135,7 +141,10 @@ class Meta
 
     public function robots(): string
     {
-        $noindex = $this->values->bool('noindex') || Settings::bool('noindex_site');
+        $noindex = $this->values->bool('noindex')
+            || Settings::bool('noindex_site')
+            || $this->matchesNoindexPath();
+
         $nofollow = $this->values->bool('nofollow') || Settings::bool('noindex_site');
 
         $directives = [
@@ -370,6 +379,16 @@ class Meta
      */
     private function alternateTags(): array
     {
+        // A route serving several languages knows its own alternates; there is
+        // no entry to localise and ask.
+        if ($supplied = $this->overlay?->alternateUrls() ?? []) {
+            return array_values(array_map(
+                fn (string $url, string $hreflang) => '<link rel="alternate" hreflang="'.e($hreflang).'" href="'.e($url).'">',
+                $supplied,
+                array_keys($supplied),
+            ));
+        }
+
         if (! $this->entry || Site::all()->count() < 2 || ! Settings::bool('hreflang', true)) {
             return [];
         }
@@ -391,7 +410,35 @@ class Meta
 
     private function openGraphType(): string
     {
+        // A route can name the type directly. og:type has values -- product,
+        // profile, video.movie -- that no schema_type maps onto.
+        if ($type = $this->values->string('og_type')) {
+            return $type;
+        }
+
         return $this->values->string('schema_type') === 'article' ? 'article' : 'website';
+    }
+
+    /**
+     * Paths marked noindex site-wide, from the control panel and from config.
+     *
+     * The two are unioned rather than one overriding the other, so a developer
+     * adding /checkout in code and an editor adding /search in the CP do not
+     * silently delete each other's work.
+     */
+    private function matchesNoindexPath(): bool
+    {
+        $patterns = array_merge(
+            preg_split('/\R/', Settings::string('noindex_paths') ?? '') ?: [],
+            (array) config('seo-and-geo.robots.noindex_paths', []),
+        );
+
+        $patterns = array_values(array_filter(array_map(
+            fn (mixed $p) => is_string($p) ? trim(ltrim(trim($p), '/')) : '',
+            $patterns,
+        )));
+
+        return $patterns !== [] && request()->is(...$patterns);
     }
 
     private function siteName(): string

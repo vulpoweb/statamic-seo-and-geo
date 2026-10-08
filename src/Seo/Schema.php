@@ -6,6 +6,9 @@ use Statamic\Contracts\Entries\Entry as EntryContract;
 use Statamic\Facades\Entry;
 use Statamic\Facades\Site;
 use Statamic\Tags\Context;
+use Vulpo\Seo\Schema\SchemaContext;
+use Vulpo\Seo\Schema\SchemaNode;
+use Vulpo\Seo\Schema\Support\Normalize;
 use Vulpo\Seo\Support\Assets;
 use Vulpo\Seo\Support\Nominatim;
 use Vulpo\Seo\Support\Settings;
@@ -24,42 +27,268 @@ class Schema
     public function __construct(
         private readonly ValueReader $values,
         private readonly ?EntryContract $entry = null,
+        private readonly ?string $canonical = null,
+        private readonly ?SeoOverlay $overlay = null,
     ) {}
 
-    public static function forContext(Context $context): self
+    public static function forContext(Context $context, ?SeoOverlay $overlay = null): self
     {
+        $overlay ??= app(SeoOverlay::class);
+
         $id = $context->raw('id');
         $entry = is_string($id) || is_int($id) ? Entry::find($id) : null;
 
         return new self(
-            values: ValueReader::fromContext($context),
+            values: ValueReader::fromContext($context)
+                ->withOverrides($overlay->overrides())
+                ->withDefaults($overlay->defaultValues()),
             entry: $entry instanceof EntryContract ? $entry : null,
+            // Taken from Meta rather than worked out again, so the @ids in the
+            // graph are the address the page actually advertises -- including
+            // its pagination and trailing-slash rules.
+            canonical: Meta::forContext($context, $overlay)->canonical(),
+            overlay: $overlay,
         );
     }
 
+    /**
+     * One script holding a @graph, so the nodes can point at each other: the
+     * WebPage at the WebSite, the Product at the Organization selling it.
+     *
+     * Set `seo-and-geo.schema.graph` to false for the older shape, one script
+     * per node, each carrying its own @context.
+     */
     public function render(): string
     {
-        return implode("\n", array_map(
-            fn (array $node) => '<script type="application/ld+json">'.json_encode(
-                $node,
-                JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT
-            ).'</script>',
-            $this->nodes(),
-        ));
+        $nodes = $this->nodes();
+
+        if ($nodes === []) {
+            return '';
+        }
+
+        if (! config('seo-and-geo.schema.graph', true)) {
+            return implode("\n", array_map(
+                fn (array $node) => $this->script($node),
+                $nodes,
+            ));
+        }
+
+        return $this->script($this->graph());
+    }
+
+    /**
+     * The nodes as one graph. Each node keeps its own @context in nodes(), so
+     * anything built against that keeps working; the duplicates are stripped
+     * here, where the graph supplies one for all of them.
+     *
+     * @return array<string, mixed>
+     */
+    public function graph(): array
+    {
+        return [
+            '@context' => 'https://schema.org',
+            '@graph' => array_map(
+                function (array $node): array {
+                    unset($node['@context']);
+
+                    return $node;
+                },
+                $this->nodes(),
+            ),
+        ];
+    }
+
+    /**
+     * Self-contained nodes, each with its own @context.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function nodes(): array
+    {
+        $nodes = array_filter([
+            Settings::bool('schema_organization', true) ? $this->organization() : null,
+            Settings::bool('schema_website', true) ? $this->website() : null,
+            Settings::bool('schema_breadcrumbs', true) ? $this->breadcrumbs() : null,
+        ]);
+
+        $page = array_values(array_filter($this->pageNodes()));
+
+        // A WebPage with nothing to link to is noise, so webPage() only
+        // returns one once there is a breadcrumb or a page node to hang off it.
+        $webPage = $this->webPage(array_values($nodes), $page);
+
+        return $this->dedupeById($this->withoutRemovedTypes(array_values(array_filter(array_merge(
+            $nodes,
+            [$webPage],
+            $page,
+            $this->customNodes(),
+            $this->overlayNodes(),
+        )))));
+    }
+
+    /**
+     * Later nodes win on a shared @id, which is how a route can replace a
+     * field-driven node without either side knowing about the other.
+     *
+     * @param  array<int, array<string, mixed>>  $nodes
+     * @return array<int, array<string, mixed>>
+     */
+    private function dedupeById(array $nodes): array
+    {
+        $byId = [];
+        $anonymous = [];
+
+        foreach ($nodes as $node) {
+            if (is_string($id = $node['@id'] ?? null)) {
+                $byId[$id] = $node;
+
+                continue;
+            }
+
+            $anonymous[] = $node;
+        }
+
+        return array_values(array_merge(array_values($byId), $anonymous));
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $siteNodes
+     * @param  array<int, array<string, mixed>>  $pageNodes
+     * @return array<string, mixed>|null
+     */
+    private function webPage(array $siteNodes, array $pageNodes): ?array
+    {
+        if (! config('seo-and-geo.schema.webpage', true)) {
+            return null;
+        }
+
+        $breadcrumb = collect($siteNodes)->firstWhere('@type', 'BreadcrumbList');
+
+        if ($breadcrumb === null && $pageNodes === []) {
+            return null;
+        }
+
+        $context = $this->context();
+        $website = collect($siteNodes)->firstWhere('@type', 'WebSite');
+
+        return Normalize::compact([
+            '@context' => 'https://schema.org',
+            '@type' => 'WebPage',
+            '@id' => $context->webPageId(),
+            'url' => $context->canonical(),
+            'name' => $this->pageTitle(),
+            'inLanguage' => $this->language(),
+            'isPartOf' => $website ? ['@id' => $website['@id']] : null,
+            'breadcrumb' => $breadcrumb ? ['@id' => $breadcrumb['@id']] : null,
+            'mainEntity' => isset($pageNodes[0]['@id']) ? ['@id' => $pageNodes[0]['@id']] : null,
+            'datePublished' => Normalize::date($this->entry?->date()),
+            'dateModified' => Normalize::date($this->entry?->lastModified()),
+        ]);
+    }
+
+    /**
+     * The nodes a single page contributes.
+     *
+     * FAQ rows used to be reachable only by setting the page type to "FAQ",
+     * which meant a product page with a questions block had to choose. They
+     * stand alongside now, because both are true of the page.
+     *
+     * @return array<int, array<string, mixed>|null>
+     */
+    public function pageNodes(): array
+    {
+        if ($this->overlay?->removesAllSchema()) {
+            return [];
+        }
+
+        $nodes = [$this->page()];
+
+        if ($this->values->string('schema_type') !== 'faq') {
+            $nodes[] = $this->faq();
+        }
+
+        return $nodes;
     }
 
     /**
      * @return array<int, array<string, mixed>>
      */
-    public function nodes(): array
+    private function customNodes(): array
     {
-        return array_values(array_filter([
-            Settings::bool('schema_organization', true) ? $this->organization() : null,
-            Settings::bool('schema_website', true) ? $this->website() : null,
-            Settings::bool('schema_breadcrumbs', true) ? $this->breadcrumbs() : null,
-            $this->page(),
-            $this->custom(),
-        ]));
+        $custom = $this->custom();
+
+        if ($custom === null) {
+            return [];
+        }
+
+        // A top-level array is a list of nodes, not one node.
+        if (array_is_list($custom)) {
+            return array_values(array_filter($custom, 'is_array'));
+        }
+
+        return [$custom];
+    }
+
+    /**
+     * Nodes a route added by hand. Emitted after the field-driven ones so that
+     * sharing an @id replaces rather than duplicates.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function overlayNodes(): array
+    {
+        if (! $this->overlay) {
+            return [];
+        }
+
+        $context = $this->context();
+        $nodes = [];
+
+        foreach ($this->overlay->nodes() as $node) {
+            $built = $node instanceof SchemaNode ? $node->toArray($context) : $node;
+
+            if (! is_array($built) || $built === []) {
+                continue;
+            }
+
+            $nodes[] = array_merge(['@context' => 'https://schema.org'], $built);
+        }
+
+        return $nodes;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $nodes
+     * @return array<int, array<string, mixed>>
+     */
+    private function withoutRemovedTypes(array $nodes): array
+    {
+        $removed = $this->overlay?->removedTypes() ?? [];
+
+        if ($removed === []) {
+            return $nodes;
+        }
+
+        return array_values(array_filter(
+            $nodes,
+            fn (array $node) => ! in_array($node['@type'] ?? null, $removed, true),
+        ));
+    }
+
+    private function context(): SchemaContext
+    {
+        return SchemaContext::for($this->canonical ?? request()->url(), $this->language());
+    }
+
+    /**
+     * @param  array<string, mixed>  $node
+     */
+    private function script(array $node): string
+    {
+        return '<script type="application/ld+json">'.json_encode(
+            $node,
+            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT
+        ).'</script>';
     }
 
     /**
@@ -80,7 +309,7 @@ class Schema
             '@id' => $this->base().'/#organization',
             'name' => $name,
             'url' => $this->base().'/',
-            'logo' => Assets::url(Settings::get('logo')),
+            'logo' => $this->logo(),
             'description' => Settings::string('business_description'),
             'knowsAbout' => Settings::list('knows_about') ?: null,
             'areaServed' => Settings::string('area_served'),
@@ -133,7 +362,43 @@ class Schema
             'url' => $this->base().'/',
             'inLanguage' => count($languages) > 1 ? $languages : $this->language(),
             'publisher' => ['@id' => $this->base().'/#organization'],
+            'potentialAction' => $this->searchAction(),
         ]);
+    }
+
+    /**
+     * The sitelinks search box, so Google can offer your own search from the
+     * result page.
+     *
+     * Needs a URL template carrying {q} -- '/zoeken?q={q}'. Without the
+     * placeholder there is nowhere to put the term, so no action is emitted
+     * rather than a broken one.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function searchAction(): ?array
+    {
+        $template = Settings::string('search_url');
+
+        if (! $template || ! str_contains($template, '{q}')) {
+            return null;
+        }
+
+        $target = Normalize::url(str_replace('{q}', '__VULPO_Q__', $template));
+
+        if (! $target) {
+            return null;
+        }
+
+        return [
+            '@type' => 'SearchAction',
+            'target' => [
+                '@type' => 'EntryPoint',
+                // Substituted after absolutising, so url() cannot encode the braces.
+                'urlTemplate' => str_replace('__VULPO_Q__', '{search_term_string}', $target),
+            ],
+            'query-input' => 'required name=search_term_string',
+        ];
     }
 
     /**
@@ -141,6 +406,10 @@ class Schema
      */
     public function breadcrumbs(): ?array
     {
+        if ($supplied = $this->overlay?->breadcrumbTrail()) {
+            return $this->breadcrumbsFrom($supplied);
+        }
+
         if (! $this->entry) {
             return null;
         }
@@ -180,6 +449,60 @@ class Schema
         return [
             '@context' => 'https://schema.org',
             '@type' => 'BreadcrumbList',
+            '@id' => $this->context()->breadcrumbId(),
+            'itemListElement' => $items,
+        ];
+    }
+
+    /**
+     * A trail a route handed us, with Home in front of it.
+     *
+     * A crumb with no URL is dropped rather than emitted bare: schema.org only
+     * allows a ListItem without an `item` as the last one, and a trail that
+     * links to a page which does not exist is worse than a shorter trail.
+     *
+     * @param  array<int, array{name: string, url?: string|null}>  $crumbs
+     * @return array<string, mixed>|null
+     */
+    private function breadcrumbsFrom(array $crumbs): ?array
+    {
+        $context = $this->context();
+
+        array_unshift($crumbs, ['name' => __('Home'), 'url' => $context->base().'/']);
+
+        $last = array_key_last($crumbs);
+        $items = [];
+
+        foreach ($crumbs as $index => $crumb) {
+            $name = Normalize::text($crumb['name'] ?? null);
+
+            if ($name === null) {
+                continue;
+            }
+
+            $url = $context->absolute($crumb['url'] ?? null)
+                ?? ($index === $last ? $context->canonical() : null);
+
+            if ($url === null) {
+                continue;
+            }
+
+            $items[] = [
+                '@type' => 'ListItem',
+                'position' => count($items) + 1,
+                'name' => $name,
+                'item' => $url,
+            ];
+        }
+
+        if (count($items) < 2) {
+            return null;
+        }
+
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'BreadcrumbList',
+            '@id' => $context->breadcrumbId(),
             'itemListElement' => $items,
         ];
     }
@@ -232,6 +555,7 @@ class Schema
         return array_filter([
             '@context' => 'https://schema.org',
             '@type' => 'FAQPage',
+            '@id' => $this->context()->fragment('faq'),
             'inLanguage' => $this->language(),
             'mainEntity' => $questions,
         ]);
@@ -250,7 +574,8 @@ class Schema
             'headline' => $this->values->string('article_headline') ?: $this->pageTitle(),
             'description' => $this->values->string('article_description'),
             'author' => $author ? ['@type' => 'Person', 'name' => $author] : null,
-            'datePublished' => $this->values->string('article_published'),
+            'datePublished' => Normalize::date($this->values->string('article_published')),
+            'dateModified' => Normalize::date($this->entry?->lastModified()),
             'image' => Assets::url($this->values->field('article_image') ?: $this->values->field('image')),
             'mainEntityOfPage' => $this->pageUrl(),
             'inLanguage' => $this->language(),
@@ -298,6 +623,7 @@ class Schema
         return array_filter([
             '@context' => 'https://schema.org',
             '@type' => 'Product',
+            '@id' => $this->context()->fragment('product'),
             'name' => $this->values->string('product_name') ?: $this->pageTitle(),
             'description' => $this->values->string('product_description'),
             'sku' => $this->values->string('product_sku'),
@@ -325,8 +651,8 @@ class Schema
             '@type' => 'Event',
             'name' => $this->values->string('event_name') ?: $this->pageTitle(),
             'description' => $this->values->string('event_description'),
-            'startDate' => $this->values->string('event_start'),
-            'endDate' => $this->values->string('event_end'),
+            'startDate' => Normalize::date($this->values->string('event_start')),
+            'endDate' => Normalize::date($this->values->string('event_end')),
             'url' => $this->values->string('event_url') ?: $this->pageUrl(),
             'image' => Assets::url($this->values->field('image')),
             'location' => ($location = $this->values->string('event_location'))
@@ -340,7 +666,7 @@ class Schema
      * A raw JSON-LD escape hatch, for the types this addon does not model.
      * Invalid JSON is skipped rather than breaking the page.
      *
-     * @return array<string, mixed>|null
+     * @return array<array-key, mixed>|null
      */
     public function custom(): ?array
     {
@@ -358,10 +684,44 @@ class Schema
             return null;
         }
 
+        // A list of nodes is handed back as it is; customNodes() splits it.
+        if (array_is_list($decoded)) {
+            return $decoded;
+        }
+
         // Allow a bare node without the boilerplate.
         return array_key_exists('@context', $decoded)
             ? $decoded
             : array_merge(['@context' => 'https://schema.org'], $decoded);
+    }
+
+    /**
+     * Google's logo guidelines ask for dimensions, and an ImageObject is the
+     * only place to put them. Falls back to a bare URL when the value is not a
+     * resolvable asset -- a path typed into the settings, typically.
+     *
+     * @return array<string, mixed>|string|null
+     */
+    private function logo(): array|string|null
+    {
+        $value = Settings::get('logo');
+
+        if (! $url = Assets::url($value)) {
+            return null;
+        }
+
+        $asset = Assets::find($value);
+
+        if (! $asset || ! $asset->width()) {
+            return $url;
+        }
+
+        return [
+            '@type' => 'ImageObject',
+            'url' => $url,
+            'width' => $asset->width(),
+            'height' => $asset->height(),
+        ];
     }
 
     /**

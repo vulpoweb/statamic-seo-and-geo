@@ -51,6 +51,11 @@ tabs:
           default: true
           width: 50
           instructions: Only does something on a multi-site installation.
+      - handle: noindex_paths
+        field:
+          type: textarea
+          display: Hide these pages from search engines
+          instructions: 'One path per line, <code>*</code> allowed. For example <code>cart</code>, <code>checkout/*</code>, <code>search</code>. These stay crawlable on purpose: a crawler has to be allowed in to read the instruction not to index.'
     - display: Site verification
       instructions: Paste the code a service gives you when it asks for an HTML tag. Only the code, not the whole tag.
       fields:
@@ -292,6 +297,94 @@ tabs:
           type: text
           display: Longitude
           width: 50
+    - display: Site search
+      instructions: Lets Google offer your own search box on its results page.
+      fields:
+      - handle: search_url
+        field:
+          type: text
+          display: Search URL
+          instructions: 'The address of your search results page, with <code>{q}</code> where the search term goes. For example <code>/search?q={q}</code>. Leave empty to output nothing.'
+  shop:
+    display: Shop
+    sections:
+    - display: Selling
+      instructions: Only used by sites that output product structured data. Safe to leave empty otherwise.
+      fields:
+      - handle: shop_currency
+        field:
+          type: text
+          display: Currency
+          instructions: Three-letter code, for example EUR.
+          default: EUR
+          width: 50
+      - handle: shop_price_valid_days
+        field:
+          type: integer
+          display: Price valid for
+          instructions: Days. Google warns about an offer with no end date; this supplies one when a product does not.
+          default: 30
+          width: 50
+    - display: Returns
+      instructions: Output as a return policy on every offer, which is what makes a product eligible for Google's free listings.
+      fields:
+      - handle: shop_return_days
+        field:
+          type: integer
+          display: Return window
+          instructions: Days. Set to 0 if you do not accept returns.
+          width: 50
+      - handle: shop_return_fees
+        field:
+          type: select
+          display: Who pays return shipping
+          clearable: true
+          width: 50
+          options:
+            FreeReturn: 'We do'
+            ReturnShippingFees: 'The customer does'
+            RestockingFees: 'The customer, plus a restocking fee'
+      - handle: shop_return_countries
+        field:
+          type: taggable
+          display: Countries you accept returns from
+          instructions: Two-letter codes, for example BE.
+    - display: Shipping
+      fields:
+      - handle: shop_shipping_rate
+        field:
+          type: text
+          display: Shipping cost
+          instructions: In your currency, for example 5.95. Use 0 for free shipping.
+          width: 50
+      - handle: shop_shipping_countries
+        field:
+          type: taggable
+          display: Countries you ship to
+          instructions: Two-letter codes, for example BE.
+          width: 50
+      - handle: shop_handling_days_min
+        field:
+          type: integer
+          display: Handling time, from
+          instructions: Working days before it leaves the warehouse.
+          width: 25
+      - handle: shop_handling_days_max
+        field:
+          type: integer
+          display: Handling time, to
+          width: 25
+      - handle: shop_transit_days_min
+        field:
+          type: integer
+          display: Transit time, from
+          instructions: Working days in the carrier's hands.
+          width: 25
+      - handle: shop_transit_days_max
+        field:
+          type: integer
+          display: Transit time, to
+          width: 25
   sitemap:
     display: Sitemap
     sections:
@@ -302,6 +395,12 @@ tabs:
           display: Serve an XML sitemap
           default: true
           instructions: Available at `/sitemap.xml`.
+      - handle: sitemap_images
+        field:
+          type: toggle
+          display: List images
+          default: true
+          instructions: Adds each page's sharing image to the sitemap, so Google Images can find it.
       - handle: sitemap_exclude_collections
         field:
           type: collections
@@ -455,6 +554,12 @@ tabs:
           display: Exclude collections
           mode: select
           instructions: Defaults to the collections excluded from the sitemap.
+      - handle: llms_default_group
+        field:
+          type: text
+          display: Default heading
+          default: Pages
+          instructions: The heading links contributed by an addon appear under, when they do not name one of their own.
     - display: robots.txt
       instructions: Only used when there is no `public/robots.txt` file, because the web server serves that one first.
       fields:

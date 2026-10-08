@@ -20,9 +20,60 @@ class ValueReader
     private ?array $seoPro = null;
 
     /**
+     * Values handed in by a route rather than read off a page.
+     *
+     * @var array<string, mixed>
+     */
+    private array $overrides = [];
+
+    /** @var array<string, mixed> */
+    private array $defaults = [];
+
+    /**
      * @param  \Closure(string): mixed  $resolver
      */
     private function __construct(private readonly \Closure $resolver) {}
+
+    /**
+     * Values that beat the page's own fields.
+     *
+     * For a route with no entry behind it -- a product served from an API, a
+     * search results page -- this is how it says what an entry would have said.
+     *
+     * @param  array<string, mixed>  $values  keyed by logical field name
+     */
+    public function withOverrides(array $values): self
+    {
+        $clone = clone $this;
+        $clone->overrides = array_merge($this->overrides, self::usable($values));
+
+        return $clone;
+    }
+
+    /**
+     * Values that lose to the page's own fields but beat the site settings.
+     *
+     * @param  array<string, mixed>  $values  keyed by logical field name
+     */
+    public function withDefaults(array $values): self
+    {
+        $clone = clone $this;
+        $clone->defaults = array_merge($this->defaults, self::usable($values));
+
+        return $clone;
+    }
+
+    /**
+     * Drop the keys that carry no instruction, so passing a null through from a
+     * nullable DTO property is the same as not passing it at all.
+     *
+     * @param  array<string, mixed>  $values
+     * @return array<string, mixed>
+     */
+    private static function usable(array $values): array
+    {
+        return array_filter($values, fn (mixed $v) => $v !== null && $v !== '');
+    }
 
     public static function fromContext(Context $context): self
     {
@@ -44,6 +95,10 @@ class ValueReader
      */
     public function field(string $key): mixed
     {
+        if (array_key_exists($key, $this->overrides)) {
+            return $this->overrides[$key];
+        }
+
         foreach (Fields::handles($key) as $handle) {
             $value = $this->handle($handle);
 
@@ -54,7 +109,9 @@ class ValueReader
             }
         }
 
-        return $this->seoProFields()[Fields::handle($key)] ?? null;
+        return $this->seoProFields()[Fields::handle($key)]
+            ?? $this->defaults[$key]
+            ?? null;
     }
 
     /**
