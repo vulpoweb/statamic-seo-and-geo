@@ -1,19 +1,23 @@
 name: Release
 
-# Cutting a release is a judgement call -- whether something is a minor or a
-# patch is not something a commit log can decide for you -- so the version is
-# typed in by a human. Everything after that is mechanical, and this does it:
-# the CHANGELOG heading, the tag, the GitHub release and its notes.
+# Releasing is merging.
 #
-# Packagist needs no help here. packagist.yml already fires on the tag.
+# Write the notes under `## Unreleased` as you go. When it is time to ship,
+# rename that heading to the version -- `## 2.0.0` -- in a pull request, and
+# merging it cuts the release: tag, GitHub release, Packagist.
+#
+# Nothing fires on an ordinary merge, because nothing fires until a human has
+# written a version number down. That keeps semver a judgement call, which a
+# commit log cannot make for you, while costing one line in a PR rather than a
+# separate trip to the Actions tab.
+#
+# Re-running is safe: the tag already existing is a no-op, not a failure.
 
 on:
+  push:
+    branches: [main]
+    paths: ['CHANGELOG.md']
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to release, without the v (e.g. 1.5.0)'
-        required: true
-        type: string
 
 permissions:
   contents: write
@@ -21,35 +25,62 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
-    name: Release v${{ inputs.version }}
+    name: Release
 
     steps:
-      - name: Refuse to release anything but main
-        if: github.ref != 'refs/heads/main'
-        run: |
-          echo "::error::Releases are cut from main. This run is on ${{ github.ref }}."
-          exit 1
-
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Check the version looks like a version
+      - name: Read the version off the top of the changelog
+        id: changelog
         run: |
-          if ! [[ "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
-            echo "::error::'${{ inputs.version }}' is not semver. Expected 1.5.0, or 1.5.0-beta.1."
+          heading=$(awk '/^## /{ sub(/^## /, ""); print; exit }' CHANGELOG.md)
+          version=$(echo "$heading" | awk '{print $1}')
+
+          echo "Top heading: '$heading'"
+
+          # Still accumulating notes. Nothing to do, and not an error.
+          if [ "$version" = "Unreleased" ] || [ -z "$version" ]; then
+            echo "Nothing to release: the changelog still opens with '## Unreleased'."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::'$version' is not a version. Use '## 2.0.0', or '## 2.0.0 - 2026-10-08'."
             exit 1
           fi
 
-          if git rev-parse "v${{ inputs.version }}" >/dev/null 2>&1; then
-            echo "::error::v${{ inputs.version }} already exists."
+          # Idempotent: an edit to an older entry re-runs this and finds the
+          # tag already made.
+          if git rev-parse "v$version" >/dev/null 2>&1; then
+            echo "v$version is already tagged. Nothing to do."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # The notes are the changelog's own prose. A generated list of commit
+          # subjects would describe the same release worse.
+          awk '
+            seen && /^## / { exit }
+            seen            { print }
+            /^## /          { seen = 1 }
+          ' CHANGELOG.md | sed '/./,$!d' > /tmp/notes.md
+
+          if [ ! -s /tmp/notes.md ]; then
+            echo "::error::'## $heading' has no notes under it."
             exit 1
           fi
 
-      # Before anything is written, so a failed run leaves no half-made
-      # release behind. One job rather than the full matrix: the matrix has
-      # already run on every push to main, this is the last look.
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "release=true" >> "$GITHUB_OUTPUT"
+
+          echo "Release notes:"
+          cat /tmp/notes.md
+
       - name: Set up PHP
+        if: steps.changelog.outputs.release == 'true'
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
@@ -57,63 +88,34 @@ jobs:
           coverage: none
 
       - name: Install dependencies
+        if: steps.changelog.outputs.release == 'true'
         uses: ramsey/composer-install@v3
 
+      # Before the tag, so a red build leaves no release behind. One job rather
+      # than the full matrix: that has already run on this commit.
       - name: Run tests
+        if: steps.changelog.outputs.release == 'true'
         run: vendor/bin/pest --compact
 
       - name: Check code style
+        if: steps.changelog.outputs.release == 'true'
         run: vendor/bin/pint --test
 
-      # The notes are the CHANGELOG's own prose. A generated list of commit
-      # subjects would be a worse description of the same release.
-      - name: Take the release notes from the changelog
-        run: |
-          awk '/^## Unreleased$/ {found=1; next} found && /^## / {exit} found {print}' CHANGELOG.md \
-            | sed '/./,$!d' > /tmp/notes.md
-
-          if [ ! -s /tmp/notes.md ]; then
-            echo "::error::CHANGELOG.md has nothing under '## Unreleased'. Write the release notes first."
-            exit 1
-          fi
-
-          echo "Release notes:"
-          cat /tmp/notes.md
-
-      # awk rather than sed: replacing only the first match needs the GNU
-      # `0,/re/` address, which is not portable and cannot be tested on a mac.
-      - name: Date the changelog entry
-        run: |
-          awk -v heading="## ${{ inputs.version }} - $(date -u +%Y-%m-%d)" '
-            !done && /^## Unreleased$/ { print heading; done = 1; next }
-            { print }
-          ' CHANGELOG.md > /tmp/CHANGELOG.md
-
-          if ! grep -q "^## ${{ inputs.version }} - " /tmp/CHANGELOG.md; then
-            echo "::error::Could not find '## Unreleased' in CHANGELOG.md to rename."
-            exit 1
-          fi
-
-          mv /tmp/CHANGELOG.md CHANGELOG.md
-
-      - name: Commit, tag and push
+      - name: Tag
+        if: steps.changelog.outputs.release == 'true'
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
 
-          git add CHANGELOG.md
-          git commit -m "🔖 chore: release v${{ inputs.version }}"
-          git tag -a "v${{ inputs.version }}" -m "v${{ inputs.version }}"
-
-          # The tag last, so a rejected push to a protected main does not leave
-          # a tag pointing at a commit nobody else has.
-          git push origin HEAD:main
-          git push origin "v${{ inputs.version }}"
+          git tag -a "v${{ steps.changelog.outputs.version }}" \
+            -m "v${{ steps.changelog.outputs.version }}"
+          git push origin "v${{ steps.changelog.outputs.version }}"
 
       - name: Create the release
+        if: steps.changelog.outputs.release == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "v${{ inputs.version }}" \
-            --title "v${{ inputs.version }}" \
+          gh release create "v${{ steps.changelog.outputs.version }}" \
+            --title "v${{ steps.changelog.outputs.version }}" \
             --notes-file /tmp/notes.md
