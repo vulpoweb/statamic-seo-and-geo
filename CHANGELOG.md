@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.0.0
+
 ### Pages that are not entries
 
 - A route with no entry behind it can say what an entry would have said, through the new `Seo` facade: `Seo::override([...])`, `->defaults()`, `->for($object)`, `->breadcrumbs()`, `->noindex()`, `->alternates()`, `->schema()`. Precedence runs override, the page's own fields, legacy handles, SEO Pro, defaults, settings. This replaces branching away from `{{ vulpo_seo }}` in a layout, which costs the page its Organization, WebSite, Twitter card, `og:site_name`, `og:locale` and verification tags.
@@ -34,6 +36,11 @@
 - `Article` gained `dateModified`.
 
 ### Upgrading
+
+A major because two things change what a live site *emits*, even though no
+public PHP signature was removed or narrowed: structured data comes out as one
+`@graph`, and a published config that was being ignored starts applying. Both
+are reversible, but neither should arrive unannounced in a patch.
 
 - Structured data is one `@graph` by default. Set `seo-and-geo.schema.graph` to `false` for the previous shape.
 - Your published config is now actually read. Check `sitemap.route`, `robots.route` and `llms.route` before deploying — a value that was being ignored will start applying.
