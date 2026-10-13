@@ -6,6 +6,9 @@ use Vulpo\Seo\Support\YamlFile;
 
 /**
  * Rows in a YAML file. The default, and what a flat-file Statamic site uses.
+ *
+ * Every change is one locked read-modify-write through YamlFile::mutate(), so
+ * concurrent requests bumping the same log cannot corrupt it.
  */
 class YamlRows implements RowRepository
 {
@@ -13,43 +16,35 @@ class YamlRows implements RowRepository
 
     public function all(): array
     {
-        return array_values(array_filter($this->file->read(), 'is_array'));
+        return $this->rows($this->file->read());
     }
 
     public function replace(array $rows): void
     {
-        $this->file->write(array_values($rows));
+        $this->file->mutate(fn () => array_values($rows));
     }
 
     public function put(array $keys, array $values): void
     {
-        $rows = $this->all();
-        $index = $this->indexOf($rows, $keys);
-
-        if ($index === null) {
-            $rows[] = array_merge($keys, $values);
-        } else {
-            $rows[$index] = array_merge($rows[$index], $values);
-        }
-
-        $this->replace($rows);
+        $this->change(fn (array $rows) => $this->upsert($rows, $keys, $values));
     }
 
     public function bump(array $keys, string $counter, array $values): void
     {
-        $rows = $this->all();
-        $index = $this->indexOf($rows, $keys);
-        $current = $index === null ? 0 : (int) ($rows[$index][$counter] ?? 0);
+        $this->change(function (array $rows) use ($keys, $counter, $values) {
+            $index = $this->indexOf($rows, $keys);
+            $current = $index === null ? 0 : (int) ($rows[$index][$counter] ?? 0);
 
-        $this->put($keys, array_merge($values, [$counter => $current + 1]));
+            return $this->upsert($rows, $keys, array_merge($values, [$counter => $current + 1]));
+        });
     }
 
     public function delete(array $keys): void
     {
-        $this->replace(array_values(array_filter(
-            $this->all(),
+        $this->change(fn (array $rows) => array_filter(
+            $rows,
             fn (array $row) => ! $this->matches($row, $keys),
-        )));
+        ));
     }
 
     public function truncate(): void
@@ -59,19 +54,55 @@ class YamlRows implements RowRepository
 
     public function pruneBefore(string $column, string $value): void
     {
-        $this->replace(array_values(array_filter(
-            $this->all(),
+        $this->change(fn (array $rows) => array_filter(
+            $rows,
             fn (array $row) => (string) ($row[$column] ?? '') >= $value,
-        )));
+        ));
     }
 
     public function keepNewest(string $column, int $limit): void
     {
-        $rows = $this->all();
+        $this->change(function (array $rows) use ($column, $limit) {
+            usort($rows, fn (array $a, array $b) => strcmp((string) ($b[$column] ?? ''), (string) ($a[$column] ?? '')));
 
-        usort($rows, fn (array $a, array $b) => strcmp((string) ($b[$column] ?? ''), (string) ($a[$column] ?? '')));
+            return array_slice($rows, 0, $limit);
+        });
+    }
 
-        $this->replace(array_slice($rows, 0, $limit));
+    /**
+     * @param  callable(array<int, array<string, mixed>>): array<int, array<string, mixed>>  $change
+     */
+    private function change(callable $change): void
+    {
+        $this->file->mutate(fn (array $data) => array_values($change($this->rows($data))));
+    }
+
+    /**
+     * @param  array<mixed>  $data
+     * @return array<int, array<string, mixed>>
+     */
+    private function rows(array $data): array
+    {
+        return array_values(array_filter($data, 'is_array'));
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $rows
+     * @param  array<string, mixed>  $keys
+     * @param  array<string, mixed>  $values
+     * @return array<int, array<string, mixed>>
+     */
+    private function upsert(array $rows, array $keys, array $values): array
+    {
+        $index = $this->indexOf($rows, $keys);
+
+        if ($index === null) {
+            $rows[] = array_merge($keys, $values);
+        } else {
+            $rows[$index] = array_merge($rows[$index], $values);
+        }
+
+        return $rows;
     }
 
     /**

@@ -56,8 +56,10 @@ abstract class TestCase extends AddonTestCase
             storage_path('app/'.config('seo-and-geo.ai_crawlers.log_path')),
             storage_path('app/'.config('seo-and-geo.redirects.uri_ledger_path')),
         ] as $path) {
-            if (file_exists($path)) {
-                unlink($path);
+            foreach ([$path, $path.'.lock'] as $file) {
+                if (file_exists($file)) {
+                    unlink($file);
+                }
             }
         }
     }

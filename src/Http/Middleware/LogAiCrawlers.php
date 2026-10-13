@@ -5,6 +5,7 @@ namespace Vulpo\Seo\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 use Vulpo\Seo\AiCrawlers\CrawlerLog;
 use Vulpo\Seo\Support\Settings;
 
@@ -19,7 +20,12 @@ class LogAiCrawlers
         }
 
         if ($bot = $this->log->identify($request->userAgent())) {
-            $this->log->record($bot, '/'.trim($request->decodedPath(), '/'));
+            // Counting a visit is a nicety; it must never cost the visitor the page.
+            try {
+                $this->log->record($bot, '/'.trim($request->decodedPath(), '/'));
+            } catch (Throwable $exception) {
+                report($exception);
+            }
         }
 
         return $next($request);
