@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 2.0.1
+
+### Fixed
+
+- The flat-file AI crawler log, 404 log and URL index could be corrupted by requests writing at the same time: one request read the file while another had just emptied it, and the two writes landed on top of each other. The broken YAML then failed every later read, taking the dashboard and every AI crawler request down with it. Writes now take a lock and land in a single rename, so a reader only ever sees a whole file.
+- A log in storage that no longer parses reads as empty and is rewritten on the next visit, instead of throwing. The redirects file in the project still throws, because reading it as empty would wipe every redirect on the next save.
+- Logging an AI crawler visit or a 404 can no longer fail the response. The error is reported and the page goes out.
+
 ## 2.0.0
 
 ### Pages that are not entries

@@ -6,6 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Statamic\Facades\Site;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 use Vulpo\Seo\Redirects\NotFoundLog;
 use Vulpo\Seo\Redirects\RedirectRepository;
 
@@ -41,7 +42,12 @@ class HandleNotFound
             return redirect($this->target($redirect, $request), $redirect['status']);
         }
 
-        $this->log->record($path, $request->headers->get('referer'), $site);
+        // The 404 still has to go out when the log cannot be written.
+        try {
+            $this->log->record($path, $request->headers->get('referer'), $site);
+        } catch (Throwable $exception) {
+            report($exception);
+        }
 
         return $response;
     }
